@@ -1,0 +1,26 @@
+[package]
+name = "backend"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+hyper = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+leptos_axum = { workspace = true }
+leptos = { workspace = true, features = ["ssr"] }
+shared = { path = "../shared" }
+frontend = { path = "../frontend", features = ["ssr"] }
+cfg-if = { workspace = true }
+
+[features]
+default = ["ssr"]
+ssr = ["leptos/ssr", "leptos_axum"]

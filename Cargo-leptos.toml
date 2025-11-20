@@ -1,0 +1,125 @@
+[package]
+name = "loydon-resort"
+version = "0.1.0"
+edition = "2021"
+authors = ["Your Name <your.email@example.com>"]
+
+[dependencies]
+
+[[bench]]
+name = "app_benches"
+harness = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "z"
+strip = true
+
+# Config for 'cargo leptos build'
+[package.metadata.leptos]
+# The name used by wasm-bindgen/cargo-leptos for the JS/WASM bundle. Defaults to the crate name
+output-name = "loydon"
+
+# The site root folder is where cargo-leptos will build your site, usually analogous to a public folder
+site-root = "target/site"
+
+# The site-root relative folder where cargo-leptos will expect your built JS/WASM/CSS 
+site-pkg-dir = "pkg"
+
+# The IP and port (port is optional, 3000 is the default) where the server is running. used to proxy requests when `ssr` feature is enabled and building for hydration
+dev-leptos-server = "127.0.0.1:3000"
+
+# The IP and port (port is optional, 443 is the default) where the server is running. `https://` is NOT optional for remote, but optional for localhost. necessary to include port if not 443 or 80
+# Optional, Defaults to "localhost" 
+#remote-server = "https://your-server-3000"
+
+# The browserlist query used for optimizing the CSS with lightningcss. If not set, the CSS will be optimized for all browsers (the default).
+# See https://browsersl.ist
+#browserquery = "defaults"
+
+# Set this to 'true' if using stable a Rust version or set to 'nightly' otherwise.
+rust-toolchain = "stable"
+
+# The cargo-leptos version
+leptos-version = "0.6"
+
+# The default http port to use during development. Next available port is used if taken.
+dev-server-port = 3000
+
+# The default address to bind to during development.
+dev-server-addr = "127.0.0.1"
+
+# The features to use when compiling the bin target
+#
+# Optional. Can be over-ridden with the command line parameter --bin-features
+bin-features = ["ssr"]
+
+# If the --no-default-features flag should be used when compiling the bin target
+#
+# Optional. Defaults to false.
+#bin-default-features = false
+
+# The features to use when compiling the lib target
+#
+# Optional. Can be over-ridden with the command line parameter --lib-features
+lib-features = ["hydrate"]
+
+# If the --no-default-features flag should be used when compiling the lib target
+#
+# Optional. Defaults to false.
+#lib-default-features = false
+
+# The profile to use for `cargo build` and `cargo leptos build` when running in development mode
+#
+# Optional, and only used when NOT running in release mode. Defaults to "dev"
+dev-profile = "dev"
+
+# The profile to use for `cargo build` and `cargo leptos build` when running in release mode.
+#
+# Optional, and defaults to "release".
+release-profile = "release"
+
+# The default style to use in hydration, autoreload or custom
+# Optional, and defaults to "autoreload"
+style = "file"
+
+# path relative to Cargo.toml to CSS file when `style = "file"`
+css-dir = "style"
+
+# Environment variables (optional) to pass to the sass compiler
+#
+# Optional. Derive from `WEB_COMPRESS_CSS`
+#web-compress-css = true
+
+# Optional, path to wasm-opt binary. Some have found issues with using this option, alternately you can manually install `wasm-opt`
+#
+#wasm-opt-path = "~/.cargo/bin/wasm-opt"
+
+# Optional, to use `cargo-watch` instead of the built in file watcher. This might help with some issues on windows.
+# to use cargo-watch: `cargo install cargo-watch` and set this value to `Some(true)`
+#
+# watch = Some(true)
+
+# The site-relative URL path to use for requests to a different server (only the part of the request up to the domain is cut off)
+#
+# Optional, defaults to empty string when ssr feature is enabled, "/" when hydrate feature is enabled
+#redirect-trailing-slash = ""
+
+# By default, this will change ./style/main.scss and ./style/main.css if it exists into ./style/main-[HASH].css
+# Setting to true will instead inline your CSS into the HTML <head of the response.html file
+#inline-css = false
+
+# If you'd like to change the hash used for cache-busting, you can provide a hash. By default, a random hash will be generated for you.
+#hash = "my_hash"
+
+# A hostname relative path to the/file. eg. it could be "/auth/login"
+# Optional: It not provided, the file will be located at the root of the domain.
+#auth-pages-dir = "/auth"
+
+# Advanced example configuration
+# when the env var RUST_LOG=server=debug or RUST_LOG=client=debug the server will print debug statements during both hydration and generation on the server, and the client will print debug statements during hydration.
+#ssr-mode = "InPlace"

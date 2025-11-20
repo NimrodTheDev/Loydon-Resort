@@ -1,0 +1,6 @@
+[build]
+# Use nightly Rust for Leptos
+rustflags = ["--cfg", "leptos"]
+
+[alias]
+leptos = "run --manifest-path=backend/Cargo.toml --"
