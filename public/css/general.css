@@ -1,0 +1,27 @@
+* {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+body {
+	font-family: "Georgia", serif;
+	background-color: #f5f0e8;
+	color: #4a4238;
+	padding: 0 20px;
+}
+
+.btn {
+	display: inline-block;
+	background-color: #4a4238;
+	color: #f5f0e8;
+	padding: 18px 40px;
+	text-decoration: none;
+	border-radius: 8px;
+	font-size: 1.3rem;
+	transition: background-color 0.3s;
+}
+
+.btn:hover {
+	background-color: #6a5d4f;
+}

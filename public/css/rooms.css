@@ -1,0 +1,8 @@
+.room-card {
+	background-color: #f5f0e8;
+	border: 3px solid #4a4238;
+	border-radius: 12px;
+	padding: 30px;
+	text-align: center;
+	transition: transform 0.3s;
+}

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<%- include('partials/head'); %>
+		<title>Contact Us | <%= hotelName %></title>
+
+		<!-- SEO HOTEL SCHEMA (Helps Google Understand Your Location) -->
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "Hotel",
+				"name": "<%= hotelName %>",
+				"address": {
+					"@type": "PostalAddress",
+					"streetAddress": "<%= address.street %>",
+					"addressLocality": "<%= address.city %>",
+					"addressRegion": "<%= address.state %>",
+					"postalCode": "<%= address.zip %>",
+					"addressCountry": "<%= address.country %>"
+				},
+				"telephone": "<%= phone %>",
+				"email": "<%= email %>",
+				"url": "<%= websiteUrl %>"
+			}
+		</script>
+	</head>
+
+	<body class="bg-bg">
+		<%- include('partials/nav'); %>
+
+		<div class="max-w-5xl mx-auto mt-12 px-4 mb-20">
+			<h1 class="text-4xl font-bold text-hotel mb-6">Contact Us</h1>
+
+			<div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+				<!-- CONTACT DETAILS (SEO BOOST) -->
+				<div class="bg-white p-8 rounded-xl shadow-lg space-y-4">
+					<h2 class="text-2xl font-semibold text-hotel mb-2">
+						Hotel Information
+					</h2>
+
+					<p class="text-gray-700">
+						<strong>Hotel Name:</strong> <%= hotelName %>
+					</p>
+
+					<p class="text-gray-700">
+						<strong>Address:</strong><br />
+						<%= address.street %>,<br />
+						<%= address.city %>, <%= address.state %>, <%= address.country %>
+					</p>
+
+					<p class="text-gray-700"><strong>Phone:</strong> <%= phone %></p>
+
+					<p class="text-gray-700"><strong>Email:</strong> <%= email %></p>
+
+					<p class="text-gray-700">
+						<strong>Opening Hours:</strong><br />
+						Mon – Sun: 24 Hours
+					</p>
+
+					<p class="text-gray-700">
+						<strong>Nearby Landmarks:</strong><br />
+						<%= nearbyLandmarks.join(", ") %>
+					</p>
+				</div>
+
+				<!-- GOOGLE MAP EMBED -->
+				<div class="rounded-xl overflow-hidden shadow-lg h-96">
+					<iframe
+						src="https://www.google.com/maps?q=<%= encodeURI(address.street + ' ' + address.city) %>&output=embed"
+						class="w-full h-full border-0"
+						allowfullscreen=""
+						loading="lazy"
+					></iframe>
+				</div>
+			</div>
+
+			<!-- CONTACT FORM -->
+			<div class="bg-white p-8 rounded-xl shadow-lg mt-12">
+				<h2 class="text-2xl font-bold text-hotel mb-4">Send Us a Message</h2>
+
+				<form action="/contact" method="POST" class="space-y-5">
+					<div>
+						<label class="block text-hotel mb-1">Name</label>
+						<input
+							type="text"
+							name="name"
+							required
+							class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent"
+						/>
+					</div>
+
+					<div>
+						<label class="block text-hotel mb-1">Email</label>
+						<input
+							type="email"
+							name="email"
+							required
+							class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent"
+						/>
+					</div>
+
+					<div>
+						<label class="block text-hotel mb-1">Message</label>
+						<textarea
+							name="message"
+							rows="5"
+							required
+							class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent"
+						></textarea>
+					</div>
+
+					<button class="btn">Send Message</button>
+				</form>
+			</div>
+		</div>
+
+		<%- include('partials/footer'); %>
+	</body>
+</html>
