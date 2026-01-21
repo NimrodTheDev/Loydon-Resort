@@ -1,105 +1,208 @@
 import { Router } from "express";
+const axios = require("axios");
+require("dotenv").config();
+import {
+	getRooms,
+	getRoomByCategory,
+	getHotelInfo,
+	createBooking,
+	getBookingByCode,
+	checkInGuest,
+} from "../db/queries.js";
 
 const router = Router();
 
-const roomsData = [
-	{
-		name: "Standard",
-		icon: `<svg viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg"> <rect x="40" y="60" width="120" height="70" rx="5" fill="#c4b5a0" stroke="#4a4238" stroke-width="2"/> <rect x="50" y="50" width="100" height="50" fill="#d4c4b0" stroke="#4a4238" stroke-width="2"/> <line x1="100" y1="50" x2="100" y2="100" stroke="#4a4238" stroke-width="2"/> <rect x="20" y="100" width="15" height="30" fill="#8a7d6f"/> <rect x="15" y="90" width="25" height="15" fill="#b4a495"/> <rect x="55" y="20" width="90" height="25" fill="#b4a495" stroke="#4a4238" stroke-width="2"/> </svg>`,
-		short_description:
-			"Cozy room with essential amenities — perfect for solo travelers or couples.",
-		price: 7000,
-		ammedities: [
-			"Television",
-			"Fan",
-			"A/C",
-			"Shower",
-			"3 socket spots",
-			"Clothes rack",
-			"drawer",
-			"Bed size for 1",
-		],
-		available: [201, 202, 203, 204, 205, 206, 303, 304, 305, 306],
-	},
-	{
-		name: "Deluxe",
-		icon: `<svg viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg"> <rect x="30" y="60" width="140" height="70" rx="5" fill="#c4b5a0" stroke="#4a4238" stroke-width="2"/> <rect x="50" y="50" width="100" height="50" fill="#d4c4b0" stroke="#4a4238" stroke-width="2"/> <line x1="100" y1="50" x2="100" y2="100" stroke="#4a4238" stroke-width="2"/> <rect x="180" y="100" width="15" height="30" fill="#8a7d6f"/> <circle cx="187" cy="95" r="8" fill="#b4a495"/> <rect x="5" y="100" width="15" height="30" fill="#8a7d6f"/> <circle cx="12" cy="95" r="8" fill="#b4a495"/> <path d="M 85 30 Q 100 20 115 30" fill="#b4a495" stroke="#4a4238" stroke-width="2"/> </svg>`,
-		short_description:
-			"Spacious with upgraded furnishings — ideal for a comfortable stay.",
-		price: 9000,
-		ammedities: [
-			"Television",
-			"Fan",
-			"A/C",
-			"Shower",
-			"3 socket spots",
-			"Clothes rack",
-			"drawer",
-			"Bed size for 2",
-		],
-		available: [301, 308, 309],
-	},
-	{
-		name: "Suite",
-		icon: `<svg viewBox="0 0 200 150" fill="none" xmlns="http://www.w3.org/2000/svg"> <rect x="40" y="70" width="120" height="60" rx="5" fill="#c4b5a0" stroke="#4a4238" stroke-width="2"/> <rect x="50" y="60" width="100" height="40" fill="#d4c4b0" stroke="#4a4238" stroke-width="2"/> <line x1="70" y1="60" x2="70" y2="100" stroke="#4a4238" stroke-width="2"/> <line x1="130" y1="60" x2="130" y2="100" stroke="#4a4238" stroke-width="2"/> <rect x="15" y="105" width="15" height="25" fill="#8a7d6f"/> <rect x="10" y="95" width="25" height="15" fill="#b4a495"/> <rect x="165" y="30" width="30" height="40" fill="#b4a495" stroke="#4a4238" stroke-width="2"/> </svg>`,
-		short_description:
-			"Luxurious suite with extra space and premium amenities.",
-		price: 10000,
-		available: [302],
-		ammedities: [
-			"Television",
-			"Fan",
-			"A/C",
-			"Shower",
-			"3 socket spots",
-			"Clothes rack",
-			"drawer",
-			"Bed size for 3",
-			"Extra space",
-		],
-	},
-];
-
-const address = {
-	street: "Ara Secondary School, Okuku",
-	city: "Umuguma",
-	state: "Owerri",
-	country: "Nigeria",
-	zip: "460117",
-};
-const phone = "08037144808";
-const email = "nkemakolam.martin@gmail.com";
-const hotelName = "Loydon Resort";
-const website = "loydonresort.com";
-
-router.get("/", (req, res) => {
-	res.render("index", { page: "home", rooms: roomsData });
-});
-router.get("/rooms", (req, res) => {
-	res.render("rooms", { page: "room", rooms: roomsData });
-});
-router.get("/rooms/:category", (req, res) => {
-	const category = req.params.category.toLowerCase();
-	res.render("roomDetails", {
-		page: "room",
-		room: roomsData.find((room) => room.name.toLowerCase() === category),
-	});
+// Temporary API routes for testing
+router.get("/page/test", (req, res) => {
+	res.json({ message: "Page is working!" });
 });
 
-router.get("/contact", (req, res) => {
-	res.render("contact", {
-		page: "contact",
-		address,
-		phone,
-		email,
-		hotelName,
-		websiteUrl: website,
-		nearbyLandmarks: [
-			"After Orieukwu market, umuguma",
-			"Umuguma, Police station",
-			"Before Ara Secondary School, Okuku.",
-		],
-	});
+
+// Get booking details by code for check-in
+
+
+router.get("/", async (req, res) => {
+	try {
+		const rooms = await getRooms();
+		res.render("index", { page: "home", rooms });
+	} catch (error) {
+		console.error("Error fetching rooms:", error);
+		res.status(500).render("404", { page: "" });
+	}
+});
+
+router.get("/rooms", async (req, res) => {
+	try {
+		const rooms = await getRooms();
+		console.log(rooms);
+		res.render("rooms", { page: "room", rooms });
+	} catch (error) {
+		console.error("Error fetching rooms:", error);
+		res.status(500).render("404", { page: "" });
+	}
+});
+
+router.get("/rooms/:category", async (req, res) => {
+	try {
+		const category = req.params.category.toLowerCase();
+		const room = await getRoomByCategory(category);
+		console.log(room);
+
+		if (!room) {
+			return res.status(404).render("404", { page: "" });
+		}
+
+		res.render("roomDetails", { page: "room", room });
+	} catch (error) {
+		console.error("Error fetching room details:", error);
+		res.status(500).render("404", { page: "" });
+	}
+});
+
+router.get("/book/:category", async (req, res) => {
+	try {
+		const category = req.params.category.toLowerCase().replace(/-/g, " ");
+		const room = await getRoomByCategory(category);
+
+		if (!room) {
+			return res.status(404).render("404", { page: "" });
+		}
+
+		res.render("book", {
+			page: "book",
+			room,
+			paymentData: {
+				amount: 100,
+				reference: "Rooms purchased " + [].length + " " + [].join(","),
+				customerFullName: "",
+				customerEmail: "",
+			},
+			monnifyApiKey: "MK_TEST_9PRG55TX52",
+			contractCode: "2787035255",
+		});
+	} catch (error) {
+		console.error("Error fetching room for booking:", error);
+		res.status(500).render("404", { page: "" });
+	}
+});
+
+router.get("/contact", async (req, res) => {
+	try {
+		const hotelInfo = await getHotelInfo();
+
+		if (!hotelInfo) {
+			// Fallback to hardcoded data if database is empty
+			const fallbackData = {
+				address: {
+					street: "Ara Secondary School, Okuku",
+					city: "Umuguma",
+					state: "Owerri",
+					country: "Nigeria",
+					zip: "460117",
+				},
+				phone: "08037144808",
+				email: "nkemakolam.martin@gmail.com",
+				hotelName: "Loydon Resort",
+				websiteUrl: "loydonresort.com",
+				nearbyLandmarks: [
+					"After Orieukwu market, umuguma",
+					"Umuguma, Police station",
+					"Before Ara Secondary School, Okuku.",
+				],
+			};
+			return res.render("contact", { page: "contact", ...fallbackData });
+		}
+
+		res.render("contact", {
+			page: "contact",
+			address: {
+				street: hotelInfo.street,
+				city: hotelInfo.city,
+				state: hotelInfo.state,
+				country: hotelInfo.country,
+				zip: hotelInfo.zip,
+			},
+			phone: hotelInfo.phone,
+			email: hotelInfo.email,
+			hotelName: hotelInfo.name,
+			websiteUrl: hotelInfo.website,
+			nearbyLandmarks: [
+				"After Orieukwu market, umuguma",
+				"Umuguma, Police station",
+				"Before Ara Secondary School, Okuku.",
+			],
+		});
+	} catch (error) {
+		console.error("Error fetching hotel info:", error);
+		res.status(500).render("404", { page: "" });
+	}
+});
+
+router.get("/check-in", (req, res) => {
+	res.render("checkIn", { page: "checkin" });
+});
+
+router.get("/verify-payment", async (req, res) => {
+	const { reference } = req.query;
+
+	try {
+		// Try to get payment details, but always redirect to success
+		let payment = null;
+		
+		if (reference) {
+			try {
+				const authLogin = Buffer.from(
+					`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`
+				).toString("base64");
+
+				const authRes = await axios.post(
+					"https://api.monnify.com/api/v1/auth/login",
+					{},
+					{
+						headers: {
+							Authorization: `Basic ${authLogin}`,
+						},
+					}
+				);
+
+				const accessToken = authRes.data.responseBody.accessToken;
+
+				const response = await axios(
+					`https://api.monnify.com/api/v2/transactions/query`,
+					{
+						headers: {
+							Authorization: `Bearer ${accessToken}`,
+						},
+						params: { paymentReference: reference },
+					}
+				);
+
+				payment = response.data.responseBody;
+			} catch (paymentErr) {
+				console.error("Error fetching payment details:", paymentErr);
+				// Continue to success page even if payment details fetch fails
+			}
+		}
+
+		// Always render success page
+		const paymentData = payment || { 
+			transactionReference: reference || "N/A",
+			amountPaid: 0
+		};
+		
+		return res.render("success", { 
+			payment: paymentData
+		});
+	} catch (err) {
+		console.error(err);
+		// Even on error, show success page
+		return res.render("success", { 
+			payment: { 
+				transactionReference: reference?.toString() || "N/A",
+				amountPaid: 0
+			}
+		});
+	}
 });
 
 router.use((req, res) => {

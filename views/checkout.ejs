@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<%- include('partials/head'); %>
+		<title>Book <%= room.name %> | HotelExpress</title>
+
+		<script src="https://sdk.monnify.com/plugin/monnify.js"></script>
+	</head>
+
+	<body class="bg-bg">
+		<%- include('partials/nav'); %>
+
+		<div class="max-w-4xl mx-auto mt-12 px-4 mb-20">
+			<h1 class="text-4xl font-bold text-hotel mb-6">Book <%= room.name %></h1>
+
+			<div class="bg-white p-8 rounded-xl shadow-lg">
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+					<!-- Room Summary -->
+					<div>
+						<h2 class="text-2xl font-semibold text-hotel mb-4">Room Details</h2>
+						<p><strong>Room Type:</strong> <%= room.name %></p>
+						<p>
+							<strong>Price:</strong> ₦<%= room.price.toLocaleString() %> /
+							night
+						</p>
+					</div>
+
+					<!-- Booking Form -->
+					<div>
+						<h2 class="text-2xl font-semibold text-hotel mb-4">
+							Booking Information
+						</h2>
+
+						<form id="bookingForm" class="space-y-4">
+							<input
+								type="text"
+								id="guestName"
+								required
+								placeholder="Full Name"
+								class="input"
+							/>
+							<input
+								type="email"
+								id="guestEmail"
+								required
+								placeholder="Email"
+								class="input"
+							/>
+							<input
+								type="tel"
+								id="guestPhone"
+								placeholder="Phone"
+								class="input"
+							/>
+
+							<div class="grid grid-cols-2 gap-4">
+								<input type="date" id="checkInDate" required />
+								<input type="date" id="checkOutDate" required />
+							</div>
+
+							<select id="roomSelect" multiple required class="input">
+								<% room.available_rooms.forEach(r => { %>
+								<option value="<%= r.id %>">Room <%= r.number %></option>
+								<% }) %>
+							</select>
+
+							<div id="totalPrice" class="text-xl font-semibold text-accent">
+								Total: ₦0
+							</div>
+
+							<button type="submit" class="btn w-full">Confirm Booking</button>
+						</form>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<%- include('partials/footer'); %>
+
+		<script>
+			const roomPrice = Number("<%= room.price %>");
+
+			function calculateTotal() {
+				const checkIn = new Date(checkInDate.value);
+				const checkOut = new Date(checkOutDate.value);
+				const rooms = roomSelect.selectedOptions.length;
+
+				if (checkOut > checkIn && rooms > 0) {
+					const nights = (checkOut - checkIn) / (1000 * 60 * 60 * 24);
+					return nights * rooms * roomPrice;
+				}
+				return 0;
+			}
+
+			function updateTotalPrice() {
+				const total = calculateTotal();
+				totalPrice.textContent = `Total: ₦${total.toLocaleString()}`;
+			}
+
+			checkInDate.addEventListener("change", updateTotalPrice);
+			checkOutDate.addEventListener("change", updateTotalPrice);
+			roomSelect.addEventListener("change", updateTotalPrice);
+
+			document
+				.getElementById("bookingForm")
+				.addEventListener("submit", async (e) => {
+					e.preventDefault();
+
+					const totalAmount = calculateTotal();
+					if (totalAmount <= 0) {
+						alert("Invalid booking details");
+						return;
+					}
+
+					MonnifySDK.initialize({
+						amount: totalAmount,
+						currency: "NGN",
+						reference: "<%= paymentData.reference %>",
+						customerFullName: guestName.value,
+						customerEmail: guestEmail.value,
+						apiKey: "<%= monnifyApiKey %>",
+						contractCode: "<%= contractCode %>",
+						paymentDescription: "Room booking",
+
+						metadata: {
+							platform: "SSR-EJS",
+						},
+
+						onComplete: async function (response) {
+							try {
+								const bookingData = {
+									guestName: guestName.value,
+									guestEmail: guestEmail.value,
+									guestPhone: guestPhone.value,
+									roomIds: [...roomSelect.selectedOptions].map((o) => o.value),
+									checkInDate: checkInDate.value,
+									checkOutDate: checkOutDate.value,
+									totalPrice: totalAmount,
+									transactionReference: response.transactionReference,
+								};
+
+								const res = await fetch("/api/bookings", {
+									method: "POST",
+									headers: { "Content-Type": "application/json" },
+									body: JSON.stringify(bookingData),
+								});
+
+								const result = await res.json();
+
+								if (result.success) {
+									window.location.href = `/verify-payment?reference=${response.transactionReference}`;
+								} else {
+									alert("Booking failed: " + result.error);
+								}
+							} catch (err) {
+								console.error(err);
+								alert("An error occurred while confirming booking");
+							}
+						},
+
+						onClose: function () {
+							console.log("Payment modal closed");
+						},
+					});
+				});
+		</script>
+	</body>
+</html>

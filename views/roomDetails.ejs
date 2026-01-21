@@ -27,7 +27,7 @@
 					</p>
 
 					<a
-						href="https://wa.me/2348037144808?text=Goodday, I would like to make a booking for a <%= room.name %> room at Loydon Resort"
+						href="/book/<%= room.name.toLowerCase().replace(/\s+/g, '-') %>"
 						class="btn"
 						>Book Now</a
 					>
