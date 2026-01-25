@@ -170,6 +170,7 @@ router.get("/verify-payment", async (req, res) => {
 		// Always render success page
 		const paymentData = payment || { 
 			transactionReference: reference || "N/A",
+			
 			amountPaid: payment || 0
 		};
 		
