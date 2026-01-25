@@ -3,7 +3,7 @@ import path from "path";
 import router from "./routes/page.js";
 import { runMigrations } from "./migrations/schema";
 import { seedDatabase } from "./migrations/seed";
-import { addBookingCodeColumn } from "./migrations/alters.js";
+import { addBookingCodeColumn, addTransactionReferenceColumn } from "./migrations/alters.js";
 import apiRouter from "./routes/api.js";
 
 (async () => {
@@ -11,13 +11,15 @@ import apiRouter from "./routes/api.js";
 	App.use(express.json());
 	App.set("view engine", "ejs");
 	App.set("views", path.join(process.cwd(), "views"));
+	App.use("/api/", apiRouter);
 	App.use(express.static("public"));
 	App.use("/", router);
-	App.use("/api", apiRouter);
+	
 
 	// Run database migrations and seed data before starting the server
 	await runMigrations();
 	addBookingCodeColumn()
+		.then(() => addTransactionReferenceColumn())
 		.then(() => seedDatabase())
 		.then(() => {
 			App.listen(3010, () =>

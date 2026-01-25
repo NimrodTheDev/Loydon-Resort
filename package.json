@@ -1,5 +1,8 @@
 {
 	"type": "module",
+	"scripts": {
+		"test-email": "bun services/test-email.ts"
+	},
 	"dependencies": {
 		"@types/express": "^5.0.5",
 		"axios": "^1.13.2",

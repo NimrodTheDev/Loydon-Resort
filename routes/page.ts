@@ -7,6 +7,7 @@ import {
 	getHotelInfo,
 	createBooking,
 	getBookingByCode,
+	getBookingByTransactionReference,
 	checkInGuest,
 } from "../db/queries.js";
 
@@ -144,54 +145,37 @@ router.get("/check-in", (req, res) => {
 
 router.get("/verify-payment", async (req, res) => {
 	const { reference } = req.query;
-
 	try {
 		// Try to get payment details, but always redirect to success
-		let payment = null;
-		
-		if (reference) {
-			try {
-				const authLogin = Buffer.from(
-					`${process.env.MONNIFY_API_KEY}:${process.env.MONNIFY_SECRET_KEY}`
-				).toString("base64");
+		let payment: { transactionReference: string; amountPaid: number } = { transactionReference: "", amountPaid: 0 };
 
-				const authRes = await axios.post(
-					"https://api.monnify.com/api/v1/auth/login",
-					{},
-					{
-						headers: {
-							Authorization: `Basic ${authLogin}`,
-						},
-					}
-				);
-
-				const accessToken = authRes.data.responseBody.accessToken;
-
-				const response = await axios(
-					`https://api.monnify.com/api/v2/transactions/query`,
-					{
-						headers: {
-							Authorization: `Bearer ${accessToken}`,
-						},
-						params: { paymentReference: reference },
-					}
-				);
-
-				payment = response.data.responseBody;
-			} catch (paymentErr) {
-				console.error("Error fetching payment details:", paymentErr);
-				// Continue to success page even if payment details fetch fails
+		if(reference) {
+			// Try to find booking by transaction reference (Monnify reference)
+			const booking = await getBookingByTransactionReference(reference.toString());
+			if(booking) {
+				payment = {
+					transactionReference: booking.transaction_reference || reference.toString(),
+					amountPaid: booking.total_price
+				};
+			} else {
+				// Fallback: use the reference as-is (might be transaction reference or booking code)
+				payment = {
+					transactionReference: reference.toString(),
+					amountPaid: 0
+				};
 			}
 		}
+		
 
 		// Always render success page
 		const paymentData = payment || { 
 			transactionReference: reference || "N/A",
-			amountPaid: 0
+			amountPaid: payment || 0
 		};
 		
 		return res.render("success", { 
-			payment: paymentData
+			payment: paymentData,
+			page: "success"
 		});
 	} catch (err) {
 		console.error(err);
@@ -200,7 +184,8 @@ router.get("/verify-payment", async (req, res) => {
 			payment: { 
 				transactionReference: reference?.toString() || "N/A",
 				amountPaid: 0
-			}
+			},
+			page: "success"
 		});
 	}
 });

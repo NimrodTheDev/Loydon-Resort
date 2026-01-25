@@ -14,6 +14,50 @@ router.get("/test", (req, res) => {
 	res.json({ message: "API is working!" });
 });
 
+// Test email endpoint for debugging
+router.post("/test-email", async (req, res) => {
+	try {
+		const { email } = req.body;
+
+		if (!email) {
+			return res.status(400).json({ error: "Email address is required" });
+		}
+
+		console.log("🧪 Testing email service...");
+		const result = await sendBookingConfirmationEmail({
+			guestName: "Test User",
+			guestEmail: email,
+			bookingCode: "TEST-123456",
+			checkInDate: new Date().toISOString().split("T")[0],
+			checkOutDate: new Date(Date.now() + 86400000).toISOString().split("T")[0],
+			totalPrice: 10000,
+			roomDetails: [
+				{ roomNumber: 201, roomCategory: "Standard" },
+			],
+		});
+
+		if (result) {
+			res.json({ 
+				success: true, 
+				message: "Test email sent successfully! Check your inbox.",
+				email 
+			});
+		} else {
+			res.status(500).json({ 
+				success: false, 
+				error: "Failed to send test email. Check server logs for details.",
+				email 
+			});
+		}
+	} catch (error: any) {
+		console.error("Error in test email endpoint:", error);
+		res.status(500).json({ 
+			success: false, 
+			error: error.message || "Failed to send test email" 
+		});
+	}
+});
+
 router.get("/booking/:code", async (req, res) => {
 	try {
 		const { code } = req.params;
@@ -86,6 +130,7 @@ router.post("/bookings", async (req, res) => {
 			checkInDate,
 			checkOutDate,
 			totalPrice,
+			transactionReference,
 		} = req.body;
 
 		// Basic validation
@@ -114,25 +159,28 @@ router.post("/bookings", async (req, res) => {
 			checkInDate,
 			checkOutDate,
 			totalPrice,
+			transactionReference,
 		});
 
 		// Get room details for email
 		const roomDetails = await getRoomsByIds(roomIds);
 
 		// Send booking confirmation email
-		try {
-			await sendBookingConfirmationEmail({
-				guestName: booking.guest_name,
-				guestEmail: booking.guest_email,
-				bookingCode: booking.booking_code,
-				checkInDate: booking.check_in_date,
-				checkOutDate: booking.check_out_date,
-				totalPrice: booking.total_price,
-				roomDetails,
-			});
-		} catch (emailError) {
-			console.error("Failed to send booking confirmation email:", emailError);
-			// Don't fail the booking if email fails
+		console.log("📧 Attempting to send booking confirmation email...");
+		const emailSent = await sendBookingConfirmationEmail({
+			guestName: booking.guest_name,
+			guestEmail: booking.guest_email,
+			bookingCode: booking.booking_code,
+			checkInDate: booking.check_in_date,
+			checkOutDate: booking.check_out_date,
+			totalPrice: booking.total_price,
+			roomDetails,
+		});
+
+		if (emailSent) {
+			console.log("✅ Email sent successfully");
+		} else {
+			console.error("❌ Email failed to send, but booking was created");
 		}
 
 		res.status(201).json({ success: true, booking });
@@ -141,5 +189,6 @@ router.post("/bookings", async (req, res) => {
 		res.status(500).json({ error: "Failed to create booking" });
 	}
 });
+
 
 export default router;

@@ -80,6 +80,7 @@ export const createBooking = async (bookingData: {
 	checkInDate: string;
 	checkOutDate: string;
 	totalPrice: number;
+	transactionReference?: string;
 }) => {
 	const {
 		guestName,
@@ -89,6 +90,7 @@ export const createBooking = async (bookingData: {
 		checkInDate,
 		checkOutDate,
 		totalPrice,
+		transactionReference,
 	} = bookingData;
 
 	// Generate unique booking code
@@ -96,8 +98,8 @@ export const createBooking = async (bookingData: {
 
 	const result = await query(
 		`
-		INSERT INTO booking.bookings (guest_name, guest_email, guest_phone, room_ids, check_in_date, check_out_date, total_price, booking_code)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO booking.bookings (guest_name, guest_email, guest_phone, room_ids, check_in_date, check_out_date, total_price, booking_code, transaction_reference)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING *;
 	`,
 		[
@@ -109,6 +111,7 @@ export const createBooking = async (bookingData: {
 			checkOutDate,
 			totalPrice,
 			bookingCode,
+			transactionReference || null,
 		]
 	);
 
@@ -145,11 +148,32 @@ export const getBookingByCode = async (code: string) => {
 		SELECT 
 			id, guest_name, guest_email, guest_phone, room_ids, 
 			check_in_date, check_out_date, total_price, status,
-			booking_code, check_in_status, checked_in_at, created_at
+			booking_code, check_in_status, checked_in_at, created_at,
+			transaction_reference
 		FROM booking.bookings 
 		WHERE booking_code = $1
 	`,
 		[code]
+	);
+
+	return result.rows[0] || null;
+};
+
+// Get booking by transaction reference
+export const getBookingByTransactionReference = async (transactionRef: string) => {
+	const result = await query(
+		`
+		SELECT 
+			id, guest_name, guest_email, guest_phone, room_ids, 
+			check_in_date, check_out_date, total_price, status,
+			booking_code, check_in_status, checked_in_at, created_at,
+			transaction_reference
+		FROM booking.bookings 
+		WHERE transaction_reference = $1
+		ORDER BY created_at DESC
+		LIMIT 1
+	`,
+		[transactionRef]
 	);
 
 	return result.rows[0] || null;

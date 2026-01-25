@@ -1,7 +1,7 @@
 import { Pool } from "pg";
 
 export const pool = new Pool({
-	connectionString: "postgres://postgres:root@localhost:5432/loydonresort",
+	connectionString: process.env.DATABASE_URL,
 });
 
 export const query = (text: string, params?: any[]) => pool.query(text, params);

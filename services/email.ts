@@ -17,12 +17,33 @@ const getEmailConfig = () => {
 // Create reusable transporter
 const createTransporter = () => {
 	const config = getEmailConfig();
-	return nodemailer.createTransport({
+	
+	// Enhanced connection options with timeout and retry
+	const transporterOptions: any = {
 		host: config.host,
 		port: config.port,
-		secure: config.secure,
+		secure: config.secure, // true for 465, false for other ports
 		auth: config.auth,
-	});
+		connectionTimeout: 10000, // 10 seconds
+		greetingTimeout: 10000, // 10 seconds
+		socketTimeout: 10000, // 10 seconds
+		// For Gmail and most providers
+		requireTLS: !config.secure, // Require TLS for non-secure ports
+		tls: {
+			// Do not fail on invalid certificates
+			rejectUnauthorized: false,
+		},
+	};
+
+	// Gmail-specific settings
+	if (config.host.includes("gmail.com")) {
+		transporterOptions.service = "gmail";
+		// Remove host/port for service-based config
+		delete transporterOptions.host;
+		delete transporterOptions.port;
+	}
+
+	return nodemailer.createTransport(transporterOptions);
 };
 
 export interface BookingEmailData {
@@ -42,12 +63,78 @@ export const sendBookingConfirmationEmail = async (
 	bookingData: BookingEmailData
 ): Promise<boolean> => {
 	try {
+		// Debug: Log email configuration (without password)
+		const config = getEmailConfig();
+		console.log("📧 Email Configuration:");
+		console.log(`   Host: ${config.host}`);
+		console.log(`   Port: ${config.port}`);
+		console.log(`   Secure: ${config.secure}`);
+		console.log(`   User: ${config.auth.user || "NOT SET"}`);
+		console.log(`   Password: ${config.auth.pass ? "***SET***" : "NOT SET"}`);
+		console.log(`   Recipient: ${bookingData.guestEmail}`);
+
 		const hotelInfo = await getHotelInfo();
 		const hotelName = hotelInfo?.name || "Loydon Resort";
 		const hotelEmail = hotelInfo?.email || process.env.SMTP_USER || "";
 		const hotelPhone = hotelInfo?.phone || "";
 
+		if (!config.auth.user || !config.auth.pass) {
+			console.error("❌ SMTP credentials not configured!");
+			console.error("   Please set SMTP_USER and SMTP_PASS environment variables");
+			return false;
+		}
+
+		if (!hotelEmail) {
+			console.error("❌ Hotel email not configured!");
+			console.error("   Please set hotel email in database or SMTP_USER environment variable");
+			return false;
+		}
+
+		// Validate email format
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(hotelEmail)) {
+			console.error("❌ Invalid hotel email format!");
+			console.error(`   Current value: "${hotelEmail}"`);
+			console.error("   Please set a valid email address");
+			return false;
+		}
+
+		if (!emailRegex.test(bookingData.guestEmail)) {
+			console.error("❌ Invalid guest email format!");
+			console.error(`   Guest email: "${bookingData.guestEmail}"`);
+			return false;
+		}
+
+		console.log(`📧 Sending email from: ${hotelEmail} to: ${bookingData.guestEmail}`);
+
 		const transporter = createTransporter();
+
+		// Verify connection before sending (with timeout)
+		try {
+			console.log("🔍 Verifying SMTP connection...");
+			await Promise.race([
+				transporter.verify(),
+				new Promise((_, reject) => 
+					setTimeout(() => reject(new Error("Connection timeout after 10 seconds")), 10000)
+				)
+			]);
+			console.log("✅ SMTP connection verified successfully");
+		} catch (verifyError: any) {
+			console.error("❌ SMTP connection verification failed:");
+			console.error(`   Error: ${verifyError.message || verifyError}`);
+			console.error(`   Code: ${verifyError.code || "N/A"}`);
+			
+			// Provide helpful suggestions
+			if (verifyError.code === "ETIMEDOUT" || verifyError.message?.includes("timeout")) {
+				console.error("\n💡 Troubleshooting suggestions:");
+				console.error("   1. Check your internet connection");
+				console.error("   2. Verify SMTP_HOST and SMTP_PORT are correct");
+				console.error("   3. Check if firewall is blocking the connection");
+				console.error("   4. Try using port 465 with SMTP_SECURE=true");
+				console.error("   5. For Gmail, ensure 'Less secure app access' is enabled or use App Password");
+			}
+			return false;
+		}
 
 		// Calculate number of nights
 		const checkIn = new Date(bookingData.checkInDate);
@@ -75,8 +162,10 @@ export const sendBookingConfirmationEmail = async (
 			)
 			.join("");
 
+		// Use simple email format to avoid SMTP syntax issues
+		// Some SMTP servers are strict about the FROM format
 		const mailOptions = {
-			from: `"${hotelName}" <${hotelEmail}>`,
+			from: hotelEmail, // Use simple format: just the email address
 			to: bookingData.guestEmail,
 			subject: `Booking Confirmation - ${bookingData.bookingCode}`,
 			html: `
@@ -262,11 +351,23 @@ ${hotelEmail ? `Email: ${hotelEmail}` : ""}
 			`,
 		};
 
-		await transporter.sendMail(mailOptions);
-		console.log(`✅ Booking confirmation email sent to ${bookingData.guestEmail}`);
+		const info = await transporter.sendMail(mailOptions);
+		console.log(`✅ Booking confirmation email sent successfully!`);
+		console.log(`   Message ID: ${info.messageId}`);
+		console.log(`   To: ${bookingData.guestEmail}`);
+		console.log(`   Response: ${info.response || "N/A"}`);
 		return true;
-	} catch (error) {
-		console.error("❌ Error sending booking confirmation email:", error);
+	} catch (error: any) {
+		console.error("❌ Error sending booking confirmation email:");
+		console.error(`   Error Code: ${error.code || "N/A"}`);
+		console.error(`   Error Message: ${error.message || "Unknown error"}`);
+		if (error.response) {
+			console.error(`   SMTP Response: ${error.response}`);
+		}
+		if (error.command) {
+			console.error(`   Failed Command: ${error.command}`);
+		}
+		console.error("   Full Error:", error);
 		return false;
 	}
 };
