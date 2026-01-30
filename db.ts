@@ -3,39 +3,32 @@ import { Pool, PoolConfig } from "pg";
 // Get database configuration
 const getDbConfig = (): PoolConfig => {
 	// If DATABASE_URL is provided, use it
-	if (process.env.DATABASE_URL) {
-		const isSupabase = process.env.DATABASE_URL.includes("supabase.com");
-		
-		return {
+		if (process.env.DATABASE_URL) {
+		  return {
 			connectionString: process.env.DATABASE_URL,
+			// Always enable SSL when using DATABASE_URL (cloud providers require it)
+			ssl: {
+			  rejectUnauthorized: false // Allow self-signed certificates
+			},
 			// Connection pool settings
-			max: isSupabase ? 10 : 20, // Supabase pooler has connection limits
-			idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-			connectionTimeoutMillis: 20000, // Increased timeout for Supabase (20 seconds)
-			// SSL/TLS configuration for Supabase and other cloud providers
-			ssl: isSupabase ? {
-				rejectUnauthorized: false, // Supabase uses self-signed certificates
-			} : undefined,
+			max: 20,
+			idleTimeoutMillis: 30000,
+			connectionTimeoutMillis: 10000,
+		  };
+		}
+		
+		// Fallback to individual parameters (for local development)
+		return {
+		  host: process.env.DB_HOST || 'localhost',
+		  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+		  database: process.env.DB_NAME || 'social_media_manager',
+		  user: process.env.DB_USER || 'postgres',
+		  password: process.env.DB_PASSWORD || '',
+		  ssl: false, // Usually not needed for local
+		  max: 20,
+		  idleTimeoutMillis: 30000,
+		  connectionTimeoutMillis: 10000,
 		};
-	}
-
-	// Otherwise, use individual connection parameters
-	const host = process.env.DB_HOST || "localhost";
-	const isSupabase = host.includes("supabase.com");
-	
-	return {
-		host,
-		port: parseInt(process.env.DB_PORT || "5432"),
-		database: process.env.DB_NAME || "loydonresort",
-		user: process.env.DB_USER || "postgres",
-		password: process.env.DB_PASSWORD || "root",
-		max: isSupabase ? 10 : 20,
-		idleTimeoutMillis: 30000,
-		connectionTimeoutMillis: 20000,
-		ssl: isSupabase ? {
-			rejectUnauthorized: false,
-		} : undefined,
-	};
 };
 
 // Create connection pool with error handling
