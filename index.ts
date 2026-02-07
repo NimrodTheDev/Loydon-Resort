@@ -18,7 +18,7 @@ import apiRouter from "./routes/api.js";
 
 	// Run database migrations and seed data before starting the server
 	await runMigrations();
-	addBookingCodeColumn()
+	await addBookingCodeColumn()
 		.then(() => addTransactionReferenceColumn())
 		.then(() => seedDatabase())
 		.then(() => {

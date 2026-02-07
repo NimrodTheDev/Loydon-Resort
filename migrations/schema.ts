@@ -1,6 +1,7 @@
 import { query } from "../db";
 
 export const runMigrations = async () => {
+	console.log("🔄 Running database migrations...");
 	try {
 		await query(`
 			CREATE SCHEMA IF NOT EXISTS hotel;
