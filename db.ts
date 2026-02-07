@@ -2,33 +2,49 @@ import { Pool, PoolConfig } from "pg";
 
 // Get database configuration
 const getDbConfig = (): PoolConfig => {
+	// SSL configuration - check environment variable
+	// Options: "require" (force SSL), "prefer" (try SSL first), "disable" (no SSL)
+	const sslMode = process.env.DB_SSL_MODE || "prefer";
+	
 	// If DATABASE_URL is provided, use it
-		if (process.env.DATABASE_URL) {
-		  return {
+	if (process.env.DATABASE_URL) {
+		const config: PoolConfig = {
 			connectionString: process.env.DATABASE_URL,
-			// Always enable SSL when using DATABASE_URL (cloud providers require it)
-			ssl: {
-			  rejectUnauthorized: false // Allow self-signed certificates
-			},
 			// Connection pool settings
 			max: 20,
 			idleTimeoutMillis: 30000,
 			connectionTimeoutMillis: 10000,
-		  };
+		};
+		
+		// Configure SSL based on mode
+		if (sslMode === "disable") {
+			config.ssl = false;
+		} else if (sslMode === "require") {
+			// Force SSL (for cloud providers like Supabase)
+			config.ssl = {
+				rejectUnauthorized: false // Allow self-signed certificates
+			};
+		} else {
+			// "prefer" mode - try with SSL first, but allow fallback
+			// Default to false for local servers that don't support SSL
+			config.ssl = false;
 		}
 		
-		// Fallback to individual parameters (for local development)
-		return {
-		  host: process.env.DB_HOST || 'localhost',
-		  port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
-		  database: process.env.DB_NAME || 'social_media_manager',
-		  user: process.env.DB_USER || 'postgres',
-		  password: process.env.DB_PASSWORD || '',
-		  ssl: false, // Usually not needed for local
-		  max: 20,
-		  idleTimeoutMillis: 30000,
-		  connectionTimeoutMillis: 10000,
-		};
+		return config;
+	}
+	
+	// Fallback to individual parameters (for local development)
+	return {
+		host: process.env.DB_HOST || 'localhost',
+		port: process.env.DB_PORT ? parseInt(process.env.DB_PORT, 10) : 5432,
+		database: process.env.DB_NAME || 'social_media_manager',
+		user: process.env.DB_USER || 'postgres',
+		password: process.env.DB_PASSWORD || '',
+		ssl: sslMode === "require" ? { rejectUnauthorized: false } : false,
+		max: 20,
+		idleTimeoutMillis: 30000,
+		connectionTimeoutMillis: 10000,
+	};
 };
 
 // Create connection pool with error handling
@@ -57,7 +73,13 @@ const testConnection = async (retries = 3, delay = 2000) => {
 				console.error(`   Error: ${err.message}`);
 				console.error(`   Code: ${err.code || "N/A"}`);
 				
-				if (err.code === "ETIMEDOUT" || err.message?.includes("timeout")) {
+				if (err.message?.includes("does not support SSL")) {
+					console.error("\n💡 SSL not supported - Solution:");
+					console.error("   Add this to your .env file:");
+					console.error("   DB_SSL_MODE=disable");
+					console.error("\n   Or if you need SSL (for cloud providers like Supabase):");
+					console.error("   DB_SSL_MODE=require");
+				} else if (err.code === "ETIMEDOUT" || err.message?.includes("timeout")) {
 					console.error("\n💡 Connection timeout - Possible causes:");
 					console.error("   1. Database server is down or unreachable");
 					console.error("   2. Firewall/security group blocking the connection");

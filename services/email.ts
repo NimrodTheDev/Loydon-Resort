@@ -1,8 +1,46 @@
 import nodemailer from "nodemailer";
+import { MailSlurp } from "mailslurp-client";
 import { getHotelInfo } from "../db/queries.js";
 
-// Get email configuration from environment variables
-const getEmailConfig = () => {
+// Check if MailSlurp should be used for SMTP credentials
+export const shouldUseMailSlurp = (): boolean => {
+	return !!process.env.MAILSLURP_API_KEY;
+};
+
+// Get MailSlurp SMTP credentials
+const getMailSlurpSmtpCredentials = async (inboxId?: string) => {
+	try {
+		const apiKey = process.env.MAILSLURP_API_KEY!;
+		const mailslurp = new MailSlurp({ apiKey });
+		
+		console.log("📧 Fetching MailSlurp SMTP credentials...");
+		const server = await mailslurp.getImapSmtpAccessDetails(inboxId);
+		
+		return {
+			host: server.smtpServerHost,
+			port: server.smtpServerPort,
+			secure: false, // Disable TLS as recommended by MailSlurp
+			auth: {
+				user: server.smtpUsername,
+				pass: server.smtpPassword,
+			},
+		};
+	} catch (error: any) {
+		console.error("❌ Failed to get MailSlurp SMTP credentials:");
+		console.error(`   Error: ${error.message || error}`);
+		throw error;
+	}
+};
+
+// Get email configuration from environment variables or MailSlurp
+export const getEmailConfig = async () => {
+	// If MailSlurp is configured, use it for SMTP credentials
+	if (shouldUseMailSlurp()) {
+		const inboxId = process.env.MAILSLURP_INBOX_ID;
+		return await getMailSlurpSmtpCredentials(inboxId);
+	}
+	
+	// Fallback to regular SMTP configuration
 	return {
 		host: process.env.SMTP_HOST || "smtp.gmail.com",
 		port: parseInt(process.env.SMTP_PORT || "587"),
@@ -15,8 +53,8 @@ const getEmailConfig = () => {
 };
 
 // Create reusable transporter
-const createTransporter = () => {
-	const config = getEmailConfig();
+export const createTransporter = async () => {
+	const config = await getEmailConfig();
 	
 	// Enhanced connection options with timeout and retry
 	const transporterOptions: any = {
@@ -35,8 +73,8 @@ const createTransporter = () => {
 		},
 	};
 
-	// Gmail-specific settings
-	if (config.host.includes("gmail.com")) {
+	// Gmail-specific settings (only if not using MailSlurp)
+	if (!shouldUseMailSlurp() && config.host.includes("gmail.com")) {
 		transporterOptions.service = "gmail";
 		// Remove host/port for service-based config
 		delete transporterOptions.host;
@@ -59,81 +97,33 @@ export interface BookingEmailData {
 	}>;
 }
 
+
 export const sendBookingConfirmationEmail = async (
 	bookingData: BookingEmailData
 ): Promise<boolean> => {
 	try {
-		// Debug: Log email configuration (without password)
-		const config = getEmailConfig();
-		console.log("📧 Email Configuration:");
-		console.log(`   Host: ${config.host}`);
-		console.log(`   Port: ${config.port}`);
-		console.log(`   Secure: ${config.secure}`);
-		console.log(`   User: ${config.auth.user || "NOT SET"}`);
-		console.log(`   Password: ${config.auth.pass ? "***SET***" : "NOT SET"}`);
-		console.log(`   Recipient: ${bookingData.guestEmail}`);
-
 		const hotelInfo = await getHotelInfo();
 		const hotelName = hotelInfo?.name || "Loydon Resort";
-		const hotelEmail = hotelInfo?.email || process.env.SMTP_USER || "";
+		let hotelEmail = hotelInfo?.email || process.env.SMTP_USER || "";
 		const hotelPhone = hotelInfo?.phone || "";
-
-		if (!config.auth.user || !config.auth.pass) {
-			console.error("❌ SMTP credentials not configured!");
-			console.error("   Please set SMTP_USER and SMTP_PASS environment variables");
-			return false;
-		}
-
-		if (!hotelEmail) {
-			console.error("❌ Hotel email not configured!");
-			console.error("   Please set hotel email in database or SMTP_USER environment variable");
-			return false;
-		}
-
-		// Validate email format
-		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-		if (!emailRegex.test(hotelEmail)) {
-			console.error("❌ Invalid hotel email format!");
-			console.error(`   Current value: "${hotelEmail}"`);
-			console.error("   Please set a valid email address");
-			return false;
-		}
-
-		if (!emailRegex.test(bookingData.guestEmail)) {
-			console.error("❌ Invalid guest email format!");
-			console.error(`   Guest email: "${bookingData.guestEmail}"`);
-			return false;
-		}
-
-		console.log(`📧 Sending email from: ${hotelEmail} to: ${bookingData.guestEmail}`);
-
-		const transporter = createTransporter();
-
-		// Verify connection before sending (with timeout)
-		try {
-			console.log("🔍 Verifying SMTP connection...");
-			await Promise.race([
-				transporter.verify(),
-				new Promise((_, reject) => 
-					setTimeout(() => reject(new Error("Connection timeout after 10 seconds")), 10000)
-				)
-			]);
-			console.log("✅ SMTP connection verified successfully");
-		} catch (verifyError: any) {
-			console.error("❌ SMTP connection verification failed:");
-			console.error(`   Error: ${verifyError.message || verifyError}`);
-			console.error(`   Code: ${verifyError.code || "N/A"}`);
-			
-			// Provide helpful suggestions
-			if (verifyError.code === "ETIMEDOUT" || verifyError.message?.includes("timeout")) {
-				console.error("\n💡 Troubleshooting suggestions:");
-				console.error("   1. Check your internet connection");
-				console.error("   2. Verify SMTP_HOST and SMTP_PORT are correct");
-				console.error("   3. Check if firewall is blocking the connection");
-				console.error("   4. Try using port 465 with SMTP_SECURE=true");
-				console.error("   5. For Gmail, ensure 'Less secure app access' is enabled or use App Password");
+		
+		// If using MailSlurp, try to get the inbox email address
+		if (shouldUseMailSlurp() && !hotelEmail) {
+			try {
+				const apiKey = process.env.MAILSLURP_API_KEY!;
+				const inboxId = process.env.MAILSLURP_INBOX_ID;
+				const mailslurp = new MailSlurp({ apiKey });
+				if (inboxId) {
+					const inbox = await mailslurp.getInbox(inboxId);
+					if (inbox.emailAddress) {
+						hotelEmail = inbox.emailAddress;
+						console.log(`📧 Using MailSlurp inbox email: ${hotelEmail}`);
+					}
+				}
+			} catch (error) {
+				// If we can't get inbox email, continue with empty or fallback
+				console.log("⚠️  Could not retrieve MailSlurp inbox email, using fallback");
 			}
-			return false;
 		}
 
 		// Calculate number of nights
@@ -162,161 +152,158 @@ export const sendBookingConfirmationEmail = async (
 			)
 			.join("");
 
-		// Use simple email format to avoid SMTP syntax issues
-		// Some SMTP servers are strict about the FROM format
-		const mailOptions = {
-			from: hotelEmail, // Use simple format: just the email address
-			to: bookingData.guestEmail,
-			subject: `Booking Confirmation - ${bookingData.bookingCode}`,
-			html: `
-				<!DOCTYPE html>
-				<html>
-				<head>
-					<meta charset="utf-8">
-					<style>
-						body {
-							font-family: Arial, sans-serif;
-							line-height: 1.6;
-							color: #333;
-							max-width: 600px;
-							margin: 0 auto;
-							padding: 20px;
-						}
-						.header {
-							background-color: #4a5568;
-							color: white;
-							padding: 20px;
-							text-align: center;
-							border-radius: 8px 8px 0 0;
-						}
-						.content {
-							background-color: #f7fafc;
-							padding: 30px;
-							border: 1px solid #e2e8f0;
-						}
-						.booking-code {
-							background-color: #2d3748;
-							color: white;
-							padding: 15px;
-							text-align: center;
-							font-size: 24px;
-							font-weight: bold;
-							border-radius: 5px;
-							margin: 20px 0;
-							letter-spacing: 2px;
-						}
-						.info-section {
-							background-color: white;
-							padding: 20px;
-							margin: 15px 0;
-							border-radius: 5px;
-							border-left: 4px solid #4a5568;
-						}
-						.info-row {
-							display: flex;
-							justify-content: space-between;
-							padding: 8px 0;
-							border-bottom: 1px solid #e2e8f0;
-						}
-						.info-row:last-child {
-							border-bottom: none;
-						}
-						.label {
-							font-weight: bold;
-							color: #4a5568;
-						}
-						.value {
-							color: #2d3748;
-						}
-						.footer {
-							text-align: center;
-							padding: 20px;
-							color: #718096;
-							font-size: 14px;
-							border-top: 1px solid #e2e8f0;
-							margin-top: 20px;
-						}
-						.important {
-							background-color: #fed7d7;
-							border-left: 4px solid #e53e3e;
-							padding: 15px;
-							margin: 20px 0;
-							border-radius: 5px;
-						}
-					</style>
-				</head>
-				<body>
-					<div class="header">
-						<h1>${hotelName}</h1>
-						<p>Booking Confirmation</p>
+		// Generate HTML content
+		const htmlContent = `
+			<!DOCTYPE html>
+			<html>
+			<head>
+				<meta charset="utf-8">
+				<style>
+					body {
+						font-family: Arial, sans-serif;
+						line-height: 1.6;
+						color: #333;
+						max-width: 600px;
+						margin: 0 auto;
+						padding: 20px;
+					}
+					.header {
+						background-color: #4a5568;
+						color: white;
+						padding: 20px;
+						text-align: center;
+						border-radius: 8px 8px 0 0;
+					}
+					.content {
+						background-color: #f7fafc;
+						padding: 30px;
+						border: 1px solid #e2e8f0;
+					}
+					.booking-code {
+						background-color: #2d3748;
+						color: white;
+						padding: 15px;
+						text-align: center;
+						font-size: 24px;
+						font-weight: bold;
+						border-radius: 5px;
+						margin: 20px 0;
+						letter-spacing: 2px;
+					}
+					.info-section {
+						background-color: white;
+						padding: 20px;
+						margin: 15px 0;
+						border-radius: 5px;
+						border-left: 4px solid #4a5568;
+					}
+					.info-row {
+						display: flex;
+						justify-content: space-between;
+						padding: 8px 0;
+						border-bottom: 1px solid #e2e8f0;
+					}
+					.info-row:last-child {
+						border-bottom: none;
+					}
+					.label {
+						font-weight: bold;
+						color: #4a5568;
+					}
+					.value {
+						color: #2d3748;
+					}
+					.footer {
+						text-align: center;
+						padding: 20px;
+						color: #718096;
+						font-size: 14px;
+						border-top: 1px solid #e2e8f0;
+						margin-top: 20px;
+					}
+					.important {
+						background-color: #fed7d7;
+						border-left: 4px solid #e53e3e;
+						padding: 15px;
+						margin: 20px 0;
+						border-radius: 5px;
+					}
+				</style>
+			</head>
+			<body>
+				<div class="header">
+					<h1>${hotelName}</h1>
+					<p>Booking Confirmation</p>
+				</div>
+				
+				<div class="content">
+					<p>Dear ${bookingData.guestName},</p>
+					
+					<p>Thank you for your booking! We are delighted to confirm your reservation.</p>
+					
+					<div class="booking-code">
+						Your Booking Code: ${bookingData.bookingCode}
 					</div>
 					
-					<div class="content">
-						<p>Dear ${bookingData.guestName},</p>
-						
-						<p>Thank you for your booking! We are delighted to confirm your reservation.</p>
-						
-						<div class="booking-code">
-							Your Booking Code: ${bookingData.bookingCode}
+					<div class="important">
+						<strong>Please keep this booking code safe!</strong> You will need it when you check in.
+					</div>
+					
+					<div class="info-section">
+						<h3 style="margin-top: 0; color: #2d3748;">Booking Details</h3>
+						<div class="info-row">
+							<span class="label">Guest Name:</span>
+							<span class="value">${bookingData.guestName}</span>
 						</div>
-						
-						<div class="important">
-							<strong>Please keep this booking code safe!</strong> You will need it when you check in.
+						<div class="info-row">
+							<span class="label">Check-in Date:</span>
+							<span class="value">${formatDate(bookingData.checkInDate)}</span>
 						</div>
-						
-						<div class="info-section">
-							<h3 style="margin-top: 0; color: #2d3748;">Booking Details</h3>
-							<div class="info-row">
-								<span class="label">Guest Name:</span>
-								<span class="value">${bookingData.guestName}</span>
-							</div>
-							<div class="info-row">
-								<span class="label">Check-in Date:</span>
-								<span class="value">${formatDate(bookingData.checkInDate)}</span>
-							</div>
-							<div class="info-row">
-								<span class="label">Check-out Date:</span>
-								<span class="value">${formatDate(bookingData.checkOutDate)}</span>
-							</div>
-							<div class="info-row">
-								<span class="label">Number of Nights:</span>
-								<span class="value">${nights} night${nights > 1 ? "s" : ""}</span>
-							</div>
-							<div class="info-row">
-								<span class="label">Total Amount:</span>
-								<span class="value" style="font-weight: bold; color: #2d3748;">₦${bookingData.totalPrice.toLocaleString()}</span>
-							</div>
+						<div class="info-row">
+							<span class="label">Check-out Date:</span>
+							<span class="value">${formatDate(bookingData.checkOutDate)}</span>
 						</div>
-						
-						<div class="info-section">
-							<h3 style="margin-top: 0; color: #2d3748;">Room Details</h3>
-							<ul style="list-style: none; padding: 0;">
-								${roomListHTML}
-							</ul>
+						<div class="info-row">
+							<span class="label">Number of Nights:</span>
+							<span class="value">${nights} night${nights > 1 ? "s" : ""}</span>
 						</div>
-						
-						<div class="info-section">
-							<h3 style="margin-top: 0; color: #2d3748;">Important Information</h3>
-							<ul style="color: #4a5568;">
-								<li>Please arrive at the hotel on your check-in date</li>
-								<li>Have your booking code (${bookingData.bookingCode}) ready for check-in</li>
-								<li>If you have any questions or need to modify your booking, please contact us</li>
-							</ul>
+						<div class="info-row">
+							<span class="label">Total Amount:</span>
+							<span class="value" style="font-weight: bold; color: #2d3748;">₦${bookingData.totalPrice.toLocaleString()}</span>
 						</div>
 					</div>
 					
-					<div class="footer">
-						<p>We look forward to welcoming you!</p>
-						${hotelPhone ? `<p>Phone: ${hotelPhone}</p>` : ""}
-						${hotelEmail ? `<p>Email: ${hotelEmail}</p>` : ""}
-						<p style="margin-top: 20px;">
-							<strong>${hotelName}</strong>
-						</p>
+					<div class="info-section">
+						<h3 style="margin-top: 0; color: #2d3748;">Room Details</h3>
+						<ul style="list-style: none; padding: 0;">
+							${roomListHTML}
+						</ul>
 					</div>
-				</body>
-				</html>
-			`,
-			text: `
+					
+					<div class="info-section">
+						<h3 style="margin-top: 0; color: #2d3748;">Important Information</h3>
+						<ul style="color: #4a5568;">
+							<li>Please arrive at the hotel on your check-in date</li>
+							<li>Have your booking code (${bookingData.bookingCode}) ready for check-in</li>
+							<li>If you have any questions or need to modify your booking, please contact us</li>
+						</ul>
+					</div>
+				</div>
+				
+				<div class="footer">
+					<p>We look forward to welcoming you!</p>
+					${hotelPhone ? `<p>Phone: ${hotelPhone}</p>` : ""}
+					${hotelEmail ? `<p>Email: ${hotelEmail}</p>` : ""}
+					<p style="margin-top: 20px;">
+						<strong>${hotelName}</strong>
+					</p>
+				</div>
+			</body>
+			</html>
+		`;
+
+		// Generate text content
+		const textContent = `
 Booking Confirmation - ${bookingData.bookingCode}
 
 Dear ${bookingData.guestName},
@@ -348,7 +335,98 @@ We look forward to welcoming you!
 ${hotelName}
 ${hotelPhone ? `Phone: ${hotelPhone}` : ""}
 ${hotelEmail ? `Email: ${hotelEmail}` : ""}
-			`,
+		`;
+
+		// Get email configuration (from MailSlurp or environment variables)
+		const config = await getEmailConfig();
+		
+		// Log email configuration (without password)
+		if (shouldUseMailSlurp()) {
+			console.log("📧 Using MailSlurp SMTP server with nodemailer");
+		} else {
+			console.log("📧 Using SMTP (nodemailer) for email delivery");
+		}
+		
+		console.log("📧 Email Configuration:");
+		console.log(`   Host: ${config.host}`);
+		console.log(`   Port: ${config.port}`);
+		console.log(`   Secure: ${config.secure}`);
+		console.log(`   User: ${config.auth.user || "NOT SET"}`);
+		console.log(`   Password: ${config.auth.pass ? "***SET***" : "NOT SET"}`);
+		console.log(`   Recipient: ${bookingData.guestEmail}`);
+
+		if (!config.auth.user || !config.auth.pass) {
+			console.error("❌ SMTP credentials not configured!");
+			if (shouldUseMailSlurp()) {
+				console.error("   Failed to retrieve MailSlurp SMTP credentials");
+				console.error("   Please verify your MAILSLURP_API_KEY is correct");
+			} else {
+				console.error("   Please set SMTP_USER and SMTP_PASS environment variables");
+				console.error("   Or set MAILSLURP_API_KEY to use MailSlurp SMTP server");
+			}
+			return false;
+		}
+
+		if (!hotelEmail) {
+			console.error("❌ Hotel email not configured!");
+			console.error("   Please set hotel email in database or SMTP_USER environment variable");
+			return false;
+		}
+
+		// Validate email format
+		const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+		if (!emailRegex.test(hotelEmail)) {
+			console.error("❌ Invalid hotel email format!");
+			console.error(`   Current value: "${hotelEmail}"`);
+			console.error("   Please set a valid email address");
+			return false;
+		}
+
+		if (!emailRegex.test(bookingData.guestEmail)) {
+			console.error("❌ Invalid guest email format!");
+			console.error(`   Guest email: "${bookingData.guestEmail}"`);
+			return false;
+		}
+
+		console.log(`📧 Sending email from: ${hotelEmail} to: ${bookingData.guestEmail}`);
+
+		const transporter = await createTransporter();
+
+		// Verify connection before sending (with timeout)
+		try {
+			console.log("🔍 Verifying SMTP connection...");
+			await Promise.race([
+				transporter.verify(),
+				new Promise((_, reject) => 
+					setTimeout(() => reject(new Error("Connection timeout after 10 seconds")), 10000)
+				)
+			]);
+			console.log("✅ SMTP connection verified successfully");
+		} catch (verifyError: any) {
+			console.error("❌ SMTP connection verification failed:");
+			console.error(`   Error: ${verifyError.message || verifyError}`);
+			console.error(`   Code: ${verifyError.code || "N/A"}`);
+			
+			// Provide helpful suggestions
+			if (verifyError.code === "ETIMEDOUT" || verifyError.message?.includes("timeout")) {
+				console.error("\n💡 Troubleshooting suggestions:");
+				console.error("   1. Check your internet connection");
+				console.error("   2. Verify SMTP_HOST and SMTP_PORT are correct");
+				console.error("   3. Check if firewall is blocking the connection");
+				console.error("   4. Try using port 465 with SMTP_SECURE=true");
+				console.error("   5. For Gmail, ensure 'Less secure app access' is enabled or use App Password");
+			}
+			return false;
+		}
+
+		// Use simple email format to avoid SMTP syntax issues
+		// Some SMTP servers are strict about the FROM format
+		const mailOptions = {
+			from: hotelEmail, // Use simple format: just the email address
+			to: bookingData.guestEmail,
+			subject: `Booking Confirmation - ${bookingData.bookingCode}`,
+			html: htmlContent,
+			text: textContent,
 		};
 
 		const info = await transporter.sendMail(mailOptions);
