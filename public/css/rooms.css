@@ -1,8 +1,19 @@
 .room-card {
-	background-color: #f5f0e8;
-	border: 3px solid #4a4238;
-	border-radius: 12px;
-	padding: 30px;
-	text-align: center;
-	transition: transform 0.3s;
+	background-color: #fdfbf8;
+	border-radius: 18px;
+	box-shadow: 0 18px 40px rgba(0, 0, 0, 0.08);
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.room-card img {
+	width: 100%;
+	display: block;
+}
+
+.room-card:hover {
+	transform: translateY(-4px);
+	box-shadow: 0 24px 55px rgba(0, 0, 0, 0.12);
 }

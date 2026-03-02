@@ -26,7 +26,7 @@
 import dotenv from "dotenv";
 import path from "path";
 import { fileURLToPath } from "url";
-import { shouldUseMailSlurp, getEmailConfig, createTransporter } from "./email.js";
+import { getEmailConfig, createTransporter } from "./email.js";
 
 // Load environment variables
 const __filename = fileURLToPath(import.meta.url);
@@ -81,11 +81,6 @@ async function testEmail() {
 	try {
 		config = await getEmailConfig();
 		console.log("✅ SMTP configuration retrieved");
-		if (shouldUseMailSlurp()) {
-			console.log("   Using MailSlurp SMTP server");
-		} else {
-			console.log("   Using regular SMTP server");
-		}
 		console.log();
 	} catch (error: any) {
 		console.error("❌ Failed to get SMTP configuration");
@@ -238,7 +233,7 @@ async function testEmail() {
 				<div class="info-box">
 					<p><strong>Configuration Details:</strong></p>
 					<ul>
-						<li>Provider: ${shouldUseMailSlurp() ? "MailSlurp SMTP" : "Regular SMTP"}</li>
+						<li>Provider: Regular SMTP</li>
 						<li>SMTP Host: ${config.host}</li>
 						<li>SMTP Port: ${config.port}</li>
 						<li>Secure: ${config.secure ? "Yes (SSL/TLS)" : "No (STARTTLS)"}</li>
@@ -265,7 +260,7 @@ Congratulations! Your email service is working correctly.
 This is a test email from your HotelExpress booking system.
 
 Configuration Details:
-- Provider: ${shouldUseMailSlurp() ? "MailSlurp SMTP" : "Regular SMTP"}
+- Provider: Regular SMTP
 - SMTP Host: ${config.host}
 - SMTP Port: ${config.port}
 - Secure: ${config.secure ? "Yes (SSL/TLS)" : "No (STARTTLS)"}

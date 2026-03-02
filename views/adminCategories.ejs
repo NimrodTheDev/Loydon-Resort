@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<%- include('partials/head'); %>
+		<title>Room Categories | Admin | Loydon Resort</title>
+		<link rel="stylesheet" href="/css/general.css" />
+	</head>
+	<body class="bg-bg">
+		<%- include('partials/nav'); %>
+
+		<div class="max-w-5xl mx-auto mt-8 px-4 mb-20">
+			<div class="flex items-center gap-4 mb-6 flex-wrap">
+				<a href="/admin" class="text-gray-600 hover:text-hotel">← Admin</a>
+				<h1 class="text-4xl font-bold text-hotel">Room categories</h1>
+				<form method="post" action="/admin/logout" class="ml-auto inline">
+					<button type="submit" class="text-gray-500 hover:text-red-600 text-sm">Log out</button>
+				</form>
+			</div>
+
+			<!-- Add / Edit form -->
+			<div id="formSection" class="bg-white p-6 rounded-xl shadow-md mb-8 hidden">
+				<h2 id="formTitle" class="text-xl font-semibold text-hotel mb-4">Add category</h2>
+				<form id="categoryForm" class="space-y-4">
+					<input type="hidden" id="categoryId" name="id" />
+					<div>
+						<label for="name" class="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+						<input type="text" id="name" name="name" required class="w-full border border-gray-300 rounded-lg p-2" placeholder="e.g. Standard" />
+					</div>
+					<div>
+						<label for="short_description" class="block text-sm font-medium text-gray-700 mb-1">Short description</label>
+						<textarea id="short_description" name="short_description" rows="2" class="w-full border border-gray-300 rounded-lg p-2" placeholder="Brief description"></textarea>
+					</div>
+					<div>
+						<label for="price" class="block text-sm font-medium text-gray-700 mb-1">Price (₦) *</label>
+						<input type="number" id="price" name="price" required min="0" class="w-full border border-gray-300 rounded-lg p-2" placeholder="7000" />
+					</div>
+					<div>
+						<label for="image" class="block text-sm font-medium text-gray-700 mb-1">Category image</label>
+						<input type="file" id="image" name="image" accept="image/*" class="w-full border border-gray-300 rounded-lg p-2 bg-white" />
+						<p class="text-xs text-gray-500 mt-1">
+							Optional image used on the website for this room category.
+						</p>
+					</div>
+					<div>
+						<label class="block text-sm font-medium text-gray-700 mb-2">Amenities</label>
+						<div id="amenityCheckboxes" class="flex flex-wrap gap-2"></div>
+					</div>
+					<div class="flex gap-2">
+						<button type="submit" class="btn">Save</button>
+						<button type="button" id="cancelForm" class="btn bg-gray-500 hover:bg-gray-600">Cancel</button>
+					</div>
+				</form>
+			</div>
+
+			<div class="flex justify-between items-center mb-4">
+				<p class="text-gray-600">Manage room types (Standard, Deluxe, etc.)</p>
+				<button type="button" id="addCategoryBtn" class="btn">Add category</button>
+			</div>
+
+			<div class="bg-white rounded-xl shadow-lg overflow-hidden">
+				<div class="overflow-x-auto">
+					<table class="w-full text-left">
+						<thead class="bg-gray-50 border-b border-gray-200">
+							<tr>
+								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Name</th>
+								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Description</th>
+								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Price</th>
+								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Actions</th>
+							</tr>
+						</thead>
+						<tbody id="categoriesTable" class="divide-y divide-gray-200">
+							<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">Loading…</td></tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+			<p id="errorMessage" class="mt-4 text-red-600 hidden"></p>
+		</div>
+
+		<%- include('partials/footer'); %>
+		<script>
+			let amenities = [];
+			const formSection = document.getElementById("formSection");
+			const formTitle = document.getElementById("formTitle");
+			const categoryForm = document.getElementById("categoryForm");
+			const categoryId = document.getElementById("categoryId");
+			const addCategoryBtn = document.getElementById("addCategoryBtn");
+			const cancelForm = document.getElementById("cancelForm");
+			const categoriesTable = document.getElementById("categoriesTable");
+			const errorMessage = document.getElementById("errorMessage");
+
+			function showError(msg) {
+				errorMessage.textContent = msg;
+				errorMessage.classList.remove("hidden");
+			}
+			function clearError() {
+				errorMessage.classList.add("hidden");
+			}
+
+			async function loadAmenities() {
+				const res = await fetch("/api/amenities");
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error || "Failed to load amenities");
+				amenities = data.amenities;
+				const container = document.getElementById("amenityCheckboxes");
+				container.innerHTML = amenities.map(a => `
+					<label class="inline-flex items-center gap-1">
+						<input type="checkbox" name="amenity_ids" value="${a.id}" class="amenity-cb rounded" />
+						<span class="text-sm">${a.name}</span>
+					</label>
+				`).join("");
+			}
+
+			async function loadCategories() {
+				const res = await fetch("/api/categories");
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error || "Failed to load categories");
+				const list = data.categories;
+				if (list.length === 0) {
+					categoriesTable.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">No categories yet. Click Add category.</td></tr>';
+					return;
+				}
+				categoriesTable.innerHTML = list.map(c => `
+					<tr class="hover:bg-gray-50">
+						<td class="px-6 py-4 font-semibold text-hotel">${escapeHtml(c.name)}</td>
+						<td class="px-6 py-4 text-gray-700 max-w-xs truncate">${escapeHtml(c.short_description || "—")}</td>
+						<td class="px-6 py-4">₦${Number(c.price).toLocaleString()}</td>
+						<td class="px-6 py-4">
+							<button type="button" class="edit-category text-hotel hover:underline mr-3" data-id="${c.id}">Edit</button>
+							<button type="button" class="delete-category text-red-600 hover:underline" data-id="${c.id}" data-name="${escapeHtml(c.name)}">Delete</button>
+						</td>
+					</tr>
+				`).join("");
+				categoriesTable.querySelectorAll(".edit-category").forEach(btn => btn.addEventListener("click", () => openEdit(btn.dataset.id)));
+				categoriesTable.querySelectorAll(".delete-category").forEach(btn => btn.addEventListener("click", () => confirmDelete(btn.dataset.id, btn.dataset.name)));
+			}
+
+			function escapeHtml(s) {
+				if (!s) return "";
+				const div = document.createElement("div");
+				div.textContent = s;
+				return div.innerHTML;
+			}
+
+			function openAdd() {
+				clearError();
+				categoryId.value = "";
+				formTitle.textContent = "Add category";
+				document.getElementById("name").value = "";
+				document.getElementById("short_description").value = "";
+				document.getElementById("price").value = "";
+				const imageInput = document.getElementById("image");
+				if (imageInput) imageInput.value = "";
+				document.querySelectorAll(".amenity-cb").forEach(cb => cb.checked = false);
+				formSection.classList.remove("hidden");
+			}
+
+			async function openEdit(id) {
+				clearError();
+				const res = await fetch("/api/categories/" + id);
+				const data = await res.json();
+				if (!res.ok) throw new Error(data.error || "Failed to load category");
+				const c = data.category;
+				categoryId.value = c.id;
+				formTitle.textContent = "Edit category";
+				document.getElementById("name").value = c.name;
+				document.getElementById("short_description").value = c.short_description || "";
+				document.getElementById("price").value = c.price;
+				const imageInput = document.getElementById("image");
+				if (imageInput) imageInput.value = "";
+				const ids = (c.amenity_ids || []);
+				document.querySelectorAll(".amenity-cb").forEach(cb => {
+					cb.checked = ids.includes(cb.value);
+				});
+				formSection.classList.remove("hidden");
+			}
+
+			function closeForm() {
+				formSection.classList.add("hidden");
+			}
+
+			categoryForm.addEventListener("submit", async (e) => {
+				e.preventDefault();
+				clearError();
+				const id = categoryId.value;
+				const amenityIds = Array.from(document.querySelectorAll(".amenity-cb:checked")).map(cb => cb.value);
+
+				const formData = new FormData();
+				formData.append("name", document.getElementById("name").value.trim());
+				formData.append("short_description", document.getElementById("short_description").value.trim());
+				formData.append("price", document.getElementById("price").value);
+				amenityIds.forEach(id => formData.append("amenity_ids", id));
+				const imageInput = document.getElementById("image");
+				if (imageInput && imageInput.files[0]) {
+					formData.append("image", imageInput.files[0]);
+				}
+
+				const url = id ? "/api/categories/" + id : "/api/categories";
+				const method = id ? "PUT" : "POST";
+				const res = await fetch(url, { method, body: formData });
+				const data = await res.json();
+				if (!res.ok) {
+					showError(data.error || "Request failed");
+					return;
+				}
+				closeForm();
+				loadCategories();
+			});
+
+			async function confirmDelete(id, name) {
+				if (!confirm(`Delete category "${name}"? This only works if it has no rooms.`)) return;
+				clearError();
+				const res = await fetch("/api/categories/" + id, { method: "DELETE" });
+				const data = await res.json();
+				if (!res.ok) {
+					showError(data.error || "Delete failed");
+					return;
+				}
+				loadCategories();
+			}
+
+			addCategoryBtn.addEventListener("click", openAdd);
+			cancelForm.addEventListener("click", closeForm);
+
+			(async () => {
+				await loadAmenities();
+				await loadCategories();
+			})();
+		</script>
+	</body>
+</html>

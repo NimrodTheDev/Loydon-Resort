@@ -1,25 +1,21 @@
 <header>
 	<nav class="container">
-		<a href="/" class="logo">Loydon Resort</a>
-		<ul class="nav-links">
+		<div class="flex items-center gap-3">
+			<img src="/asset/images/LR.png" alt="Logo" class="logo w-20 h-20" />
+			<a href="/" class="logo hidden md:block">Loydon Resort</a>
+		</div>
+		<ul class="nav-links sticky top-0 z-50">
 			<li>
-				<a
-					href="/rooms"
-					class="<%= page === 'room' ? 'nav-links-active' : '' %>"
-					>Rooms</a
-				>
+				<a href="/rooms" class="<%= page === 'room' ? 'nav-links-active' : '' %>">Rooms</a>
 			</li>
 			<li>
-				<a href="/menu" class="<%= page === 'menu' ? 'nav-links-active' : '' %>"
-					>Menu</a
-				>
+				<a href="/menu" class="<%= page === 'menu' ? 'nav-links-active' : '' %>">Menu</a>
 			</li>
 			<li>
-				<a
-					href="/contact"
-					class="<%= page === 'contact' ? 'nav-links-active' : '' %>"
-					>Contact</a
-				>
+				<a href="/contact" class="<%= page === 'contact' ? 'nav-links-active' : '' %>">Contact</a>
+			</li>
+			<li>
+				<a href="/admin" class="<%= page === 'admin' ? 'nav-links-active' : '' %>">Admin</a>
 			</li>
 		</ul>
 	</nav>

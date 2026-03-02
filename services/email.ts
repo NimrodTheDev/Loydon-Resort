@@ -1,49 +1,18 @@
 import nodemailer from "nodemailer";
-import { MailSlurp } from "mailslurp-client";
+
 import { getHotelInfo } from "../db/queries.js";
 
 // Check if MailSlurp should be used for SMTP credentials
-export const shouldUseMailSlurp = (): boolean => {
-	return !!process.env.MAILSLURP_API_KEY;
-};
 
-// Get MailSlurp SMTP credentials
-const getMailSlurpSmtpCredentials = async (inboxId?: string) => {
-	try {
-		const apiKey = process.env.MAILSLURP_API_KEY!;
-		const mailslurp = new MailSlurp({ apiKey });
-		
-		console.log("📧 Fetching MailSlurp SMTP credentials...");
-		const server = await mailslurp.getImapSmtpAccessDetails(inboxId);
-		
-		return {
-			host: server.smtpServerHost,
-			port: server.smtpServerPort,
-			secure: false, // Disable TLS as recommended by MailSlurp
-			auth: {
-				user: server.smtpUsername,
-				pass: server.smtpPassword,
-			},
-		};
-	} catch (error: any) {
-		console.error("❌ Failed to get MailSlurp SMTP credentials:");
-		console.error(`   Error: ${error.message || error}`);
-		throw error;
-	}
-};
+
 
 // Get email configuration from environment variables or MailSlurp
 export const getEmailConfig = async () => {
-	// If MailSlurp is configured, use it for SMTP credentials
-	if (shouldUseMailSlurp()) {
-		const inboxId = process.env.MAILSLURP_INBOX_ID;
-		return await getMailSlurpSmtpCredentials(inboxId);
-	}
 	
 	// Fallback to regular SMTP configuration
 	return {
 		host: process.env.SMTP_HOST || "smtp.gmail.com",
-		port: parseInt(process.env.SMTP_PORT || "587"),
+		port: parseInt(process.env.SMTP_PORT || "465"),
 		secure: process.env.SMTP_SECURE === "true", // true for 465, false for other ports
 		auth: {
 			user: process.env.SMTP_USER || "",
@@ -56,30 +25,17 @@ export const getEmailConfig = async () => {
 export const createTransporter = async () => {
 	const config = await getEmailConfig();
 	
-	// Enhanced connection options with timeout and retry
+	// Connection options with timeouts to avoid hanging / unexpected socket close
 	const transporterOptions: any = {
 		host: config.host,
 		port: config.port,
 		secure: config.secure, // true for 465, false for other ports
 		auth: config.auth,
-		connectionTimeout: 10000, // 10 seconds
-		greetingTimeout: 10000, // 10 seconds
-		socketTimeout: 10000, // 10 seconds
-		// For Gmail and most providers
-		requireTLS: !config.secure, // Require TLS for non-secure ports
-		tls: {
-			// Do not fail on invalid certificates
-			rejectUnauthorized: false,
-		},
+		connectionTimeout: 10000,   // 10s to establish connection
+		greetingTimeout: 10000,     // 10s for server greeting
+		socketTimeout: 15000,       // 15s for socket inactivity (prevents stale connections)
+		pool: false,               // one-off connection per send, less chance of socket close
 	};
-
-	// Gmail-specific settings (only if not using MailSlurp)
-	if (!shouldUseMailSlurp() && config.host.includes("gmail.com")) {
-		transporterOptions.service = "gmail";
-		// Remove host/port for service-based config
-		delete transporterOptions.host;
-		delete transporterOptions.port;
-	}
 
 	return nodemailer.createTransport(transporterOptions);
 };
@@ -108,23 +64,6 @@ export const sendBookingConfirmationEmail = async (
 		const hotelPhone = hotelInfo?.phone || "";
 		
 		// If using MailSlurp, try to get the inbox email address
-		if (shouldUseMailSlurp() && !hotelEmail) {
-			try {
-				const apiKey = process.env.MAILSLURP_API_KEY!;
-				const inboxId = process.env.MAILSLURP_INBOX_ID;
-				const mailslurp = new MailSlurp({ apiKey });
-				if (inboxId) {
-					const inbox = await mailslurp.getInbox(inboxId);
-					if (inbox.emailAddress) {
-						hotelEmail = inbox.emailAddress;
-						console.log(`📧 Using MailSlurp inbox email: ${hotelEmail}`);
-					}
-				}
-			} catch (error) {
-				// If we can't get inbox email, continue with empty or fallback
-				console.log("⚠️  Could not retrieve MailSlurp inbox email, using fallback");
-			}
-		}
 
 		// Calculate number of nights
 		const checkIn = new Date(bookingData.checkInDate);
@@ -341,11 +280,8 @@ ${hotelEmail ? `Email: ${hotelEmail}` : ""}
 		const config = await getEmailConfig();
 		
 		// Log email configuration (without password)
-		if (shouldUseMailSlurp()) {
-			console.log("📧 Using MailSlurp SMTP server with nodemailer");
-		} else {
-			console.log("📧 Using SMTP (nodemailer) for email delivery");
-		}
+		
+		console.log("📧 Using SMTP (nodemailer) for email delivery");
 		
 		console.log("📧 Email Configuration:");
 		console.log(`   Host: ${config.host}`);
@@ -357,13 +293,8 @@ ${hotelEmail ? `Email: ${hotelEmail}` : ""}
 
 		if (!config.auth.user || !config.auth.pass) {
 			console.error("❌ SMTP credentials not configured!");
-			if (shouldUseMailSlurp()) {
-				console.error("   Failed to retrieve MailSlurp SMTP credentials");
-				console.error("   Please verify your MAILSLURP_API_KEY is correct");
-			} else {
 				console.error("   Please set SMTP_USER and SMTP_PASS environment variables");
 				console.error("   Or set MAILSLURP_API_KEY to use MailSlurp SMTP server");
-			}
 			return false;
 		}
 
@@ -390,51 +321,48 @@ ${hotelEmail ? `Email: ${hotelEmail}` : ""}
 
 		console.log(`📧 Sending email from: ${hotelEmail} to: ${bookingData.guestEmail}`);
 
-		const transporter = await createTransporter();
-
-		// Verify connection before sending (with timeout)
-		try {
-			console.log("🔍 Verifying SMTP connection...");
-			await Promise.race([
-				transporter.verify(),
-				new Promise((_, reject) => 
-					setTimeout(() => reject(new Error("Connection timeout after 10 seconds")), 10000)
-				)
-			]);
-			console.log("✅ SMTP connection verified successfully");
-		} catch (verifyError: any) {
-			console.error("❌ SMTP connection verification failed:");
-			console.error(`   Error: ${verifyError.message || verifyError}`);
-			console.error(`   Code: ${verifyError.code || "N/A"}`);
-			
-			// Provide helpful suggestions
-			if (verifyError.code === "ETIMEDOUT" || verifyError.message?.includes("timeout")) {
-				console.error("\n💡 Troubleshooting suggestions:");
-				console.error("   1. Check your internet connection");
-				console.error("   2. Verify SMTP_HOST and SMTP_PORT are correct");
-				console.error("   3. Check if firewall is blocking the connection");
-				console.error("   4. Try using port 465 with SMTP_SECURE=true");
-				console.error("   5. For Gmail, ensure 'Less secure app access' is enabled or use App Password");
-			}
-			return false;
-		}
-
-		// Use simple email format to avoid SMTP syntax issues
-		// Some SMTP servers are strict about the FROM format
 		const mailOptions = {
-			from: hotelEmail, // Use simple format: just the email address
+			from: hotelEmail,
 			to: bookingData.guestEmail,
 			subject: `Booking Confirmation - ${bookingData.bookingCode}`,
 			html: htmlContent,
 			text: textContent,
 		};
 
-		const info = await transporter.sendMail(mailOptions);
-		console.log(`✅ Booking confirmation email sent successfully!`);
-		console.log(`   Message ID: ${info.messageId}`);
-		console.log(`   To: ${bookingData.guestEmail}`);
-		console.log(`   Response: ${info.response || "N/A"}`);
-		return true;
+		// Retry up to 2 times on transient errors (e.g. Unexpected socket close)
+		const maxTries = 2;
+		let lastError: any;
+
+		for (let attempt = 1; attempt <= maxTries; attempt++) {
+			const transporter = await createTransporter();
+			try {
+				const info = await transporter.sendMail(mailOptions);
+				transporter.close();
+				console.log(`✅ Booking confirmation email sent successfully!`);
+				console.log(`   Message ID: ${info.messageId}`);
+				console.log(`   To: ${bookingData.guestEmail}`);
+				console.log(`   Response: ${info.response || "N/A"}`);
+				return true;
+			} catch (err: any) {
+				lastError = err;
+				try {
+					transporter.close();
+				} catch (_) {}
+				const isRetryable =
+					err.message?.includes("Unexpected socket close") ||
+					err.message?.includes("Connection closed") ||
+					err.code === "ECONNRESET" ||
+					err.code === "ETIMEDOUT";
+				if (attempt < maxTries && isRetryable) {
+					console.log(`⚠️  Send failed (${err.message}), retrying (${attempt}/${maxTries})...`);
+					await new Promise((r) => setTimeout(r, 1500)); // brief delay before retry
+				} else {
+					throw err;
+				}
+			}
+		}
+
+		throw lastError;
 	} catch (error: any) {
 		console.error("❌ Error sending booking confirmation email:");
 		console.error(`   Error Code: ${error.code || "N/A"}`);

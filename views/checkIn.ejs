@@ -9,6 +9,14 @@
 		<%- include('partials/nav'); %>
 
 		<div class="max-w-4xl mx-auto mt-12 px-4 mb-20">
+			<% if (typeof fromAdmin !== 'undefined' && fromAdmin) { %>
+			<div class="mb-4 flex items-center gap-4">
+				<a href="/admin" class="text-gray-600 hover:text-hotel">← Admin</a>
+				<form method="post" action="/admin/logout" class="inline">
+					<button type="submit" class="text-gray-500 hover:text-red-600 text-sm">Log out</button>
+				</form>
+			</div>
+			<% } %>
 			<h1 class="text-4xl font-bold text-hotel mb-6 text-center">
 				Booking Lookup & Check-In
 			</h1>

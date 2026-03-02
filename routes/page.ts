@@ -1,6 +1,7 @@
-import { Router } from "express";
+import { Router, Request, Response } from "express";
 const axios = require("axios");
 require("dotenv").config();
+import { requireAdmin } from "../middleware/auth.js";
 import {
 	getRooms,
 	getRoomByCategory,
@@ -9,9 +10,17 @@ import {
 	getBookingByCode,
 	getBookingByTransactionReference,
 	checkInGuest,
+	getBookings,
+	getRoomDetailsByIds,
 } from "../db/queries.js";
 
 const router = Router();
+
+// Protect all /admin/* except /admin/login
+router.use((req: Request, res: Response, next) => {
+	if (!req.path.startsWith("/admin")) return next();
+	requireAdmin(req, res, next);
+});
 
 // Temporary API routes for testing
 router.get("/page/test", (req, res) => {
@@ -24,8 +33,9 @@ router.get("/page/test", (req, res) => {
 
 router.get("/", async (req, res) => {
 	try {
-		const rooms = await getRooms();
-		res.render("index", { page: "home", rooms });
+		//Room categories
+		const roomCategories = await getRooms();
+		res.render("index", { page: "home", rooms:roomCategories });
 	} catch (error) {
 		console.error("Error fetching rooms:", error);
 		res.status(500).render("404", { page: "" });
@@ -34,9 +44,9 @@ router.get("/", async (req, res) => {
 
 router.get("/rooms", async (req, res) => {
 	try {
-		const rooms = await getRooms();
-		console.log(rooms);
-		res.render("rooms", { page: "room", rooms });
+		//Room categories
+		const roomCategories = await getRooms();
+		res.render("rooms", { page: "room", rooms:roomCategories });
 	} catch (error) {
 		console.error("Error fetching rooms:", error);
 		res.status(500).render("404", { page: "" });
@@ -47,12 +57,9 @@ router.get("/rooms/:category", async (req, res) => {
 	try {
 		const category = req.params.category.toLowerCase();
 		const room = await getRoomByCategory(category);
-		console.log(room);
-
 		if (!room) {
 			return res.status(404).render("404", { page: "" });
 		}
-
 		res.render("roomDetails", { page: "room", room });
 	} catch (error) {
 		console.error("Error fetching room details:", error);
@@ -139,8 +146,56 @@ router.get("/contact", async (req, res) => {
 	}
 });
 
+// Redirect old check-in URL to admin check-in
 router.get("/check-in", (req, res) => {
-	res.render("checkIn", { page: "checkin" });
+	res.redirect("/admin/check-in");
+});
+
+// Admin login (no auth required)
+router.get("/admin/login", (req, res) => {
+	const session = req.session as { adminLoggedIn?: boolean } | undefined;
+	if (session?.adminLoggedIn) return res.redirect("/admin");
+	res.render("adminLogin", { page: "admin", error: null });
+});
+
+
+router.get("/admin", async (req, res) => {
+	try {
+		const page = parseInt(req.query.page as string) || 1;
+		const limit = 100;
+		const offset = (page - 1) * limit;
+		const bookings = await getBookings(limit, offset);
+		const allRoomIds = [...new Set(bookings.flatMap((b) => b.room_ids || []))];
+		const roomDetailsWithId = await getRoomDetailsByIds(allRoomIds);
+		bookings.forEach((b) => {
+			b.room_details = (b.room_ids || []).map((id: string) => roomDetailsWithId[id] || { roomNumber: "—", roomCategory: "—" });
+		});
+		const stats = {
+			total: bookings.length,
+			pending: bookings.filter((b) => b.check_in_status !== "checked_in").length,
+			checkedIn: bookings.filter((b) => b.check_in_status === "checked_in").length,
+		};
+		res.render("admin", { page: "admin", bookings, stats, offset: offset || 0, limit: limit || 100, pageCount: page || 1 });
+	} catch (error) {
+		console.error("Error loading admin:", error);
+		res.status(500).render("404", { page: "" });
+	}
+});
+
+router.get("/admin/categories", (req, res) => {
+	res.render("adminCategories", { page: "admin" });
+});
+
+router.get("/admin/rooms", (req, res) => {
+	res.render("adminRooms", { page: "admin" });
+});
+
+router.get("/admin/amenities", (req, res) => {
+	res.render("adminAmenities", { page: "admin" });
+});
+
+router.get("/admin/check-in", (req, res) => {
+	res.render("checkIn", { page: "admin", fromAdmin: true });
 });
 
 router.get("/verify-payment", async (req, res) => {
