@@ -185,12 +185,16 @@
 
 			<script>
 				//Make elements have progressive margin top
-				let ammeditiesCard = document.getElementsByClassName("amenity-card");
+				try {
+					let ammeditiesCard = document.getElementsByClassName("amenity-card");
 
-				ammeditiesCard.forEach((card, index) => {
-					console.log(card);
-					card.classList.add(`${index * 20}px`);
-				});
+					ammeditiesCard.forEach((card, index) => {
+						console.log(card);
+						card.classList.add(`${index * 20}px`);
+					});
+				} catch (error) {
+					console.log(error);
+				}
 
 
 				// Simple background slideshow for "Hotel video" section
