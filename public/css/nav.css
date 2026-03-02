@@ -4,6 +4,15 @@
 	padding: 0 20px;
 }
 
+/* Header Styles */
+header {
+	padding: 20px 0;
+	position: sticky;
+	top: 15px;
+	z-index: 100;
+	background-color: #fdfbf8;
+}
+
 nav {
 	display: flex;
 	justify-content: space-between;
