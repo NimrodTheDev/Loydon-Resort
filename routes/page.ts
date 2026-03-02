@@ -35,7 +35,7 @@ router.get("/", async (req, res) => {
 	try {
 		//Room categories
 		const roomCategories = await getRooms();
-		res.render("index", { page: "home", rooms:roomCategories });
+		res.render("index", { page: "home", rooms: roomCategories });
 	} catch (error) {
 		console.error("Error fetching rooms:", error);
 		res.status(500).render("404", { page: "" });
@@ -46,7 +46,7 @@ router.get("/rooms", async (req, res) => {
 	try {
 		//Room categories
 		const roomCategories = await getRooms();
-		res.render("rooms", { page: "room", rooms:roomCategories });
+		res.render("rooms", { page: "room", rooms: roomCategories });
 	} catch (error) {
 		console.error("Error fetching rooms:", error);
 		res.status(500).render("404", { page: "" });
@@ -102,17 +102,17 @@ router.get("/contact", async (req, res) => {
 			// Fallback to hardcoded data if database is empty
 			const fallbackData = {
 				address: {
-					street: "Ara Secondary School, Okuku",
-					city: "Umuguma",
-					state: "Owerri",
-					country: "Nigeria",
-					zip: "460117",
+					street: hotelInfo?.street || "Ara Secondary School, Okuku",
+					city: hotelInfo?.city || "Umuguma",
+					state: hotelInfo?.state || "Owerri",
+					country: hotelInfo?.country || "Nigeria",
+					zip: hotelInfo?.zip || "460117",
 				},
-				phone: "08037144808",
-				email: "nkemakolam.martin@gmail.com",
-				hotelName: "Loydon Resort",
-				websiteUrl: "loydonresort.com",
-				nearbyLandmarks: [
+				phone: hotelInfo?.phone || "08037144808",
+				email: hotelInfo?.email || "loydon71@gmail.com",
+				hotelName: hotelInfo?.name || "Loydon Resort",
+				websiteUrl: hotelInfo?.website || "loydonresort.com",
+				nearbyLandmarks: hotelInfo?.nearbyLandmarks || [
 					"After Orieukwu market, umuguma",
 					"Umuguma, Police station",
 					"Before Ara Secondary School, Okuku.",
@@ -204,10 +204,10 @@ router.get("/verify-payment", async (req, res) => {
 		// Try to get payment details, but always redirect to success
 		let payment: { transactionReference: string; amountPaid: number } = { transactionReference: "", amountPaid: 0 };
 
-		if(reference) {
+		if (reference) {
 			// Try to find booking by transaction reference (Monnify reference)
 			const booking = await getBookingByTransactionReference(reference.toString());
-			if(booking) {
+			if (booking) {
 				payment = {
 					transactionReference: booking.transaction_reference || reference.toString(),
 					amountPaid: booking.total_price
@@ -220,24 +220,24 @@ router.get("/verify-payment", async (req, res) => {
 				};
 			}
 		}
-		
+
 
 		// Always render success page
-		const paymentData = payment || { 
+		const paymentData = payment || {
 			transactionReference: reference || "N/A",
-			
+
 			amountPaid: payment || 0
 		};
-		
-		return res.render("success", { 
+
+		return res.render("success", {
 			payment: paymentData,
 			page: "success"
 		});
 	} catch (err) {
 		console.error(err);
 		// Even on error, show success page
-		return res.render("success", { 
-			payment: { 
+		return res.render("success", {
+			payment: {
 				transactionReference: reference?.toString() || "N/A",
 				amountPaid: 0
 			},
