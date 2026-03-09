@@ -194,6 +194,11 @@ router.get("/admin/amenities", (req, res) => {
 	res.render("adminAmenities", { page: "admin" });
 });
 
+router.get("/admin/settings", async (req, res) => {
+	const hotelInfo = await getHotelInfo();
+	res.render("adminSettings", { page: "admin", hotelInfo });
+});
+
 router.get("/admin/check-in", (req, res) => {
 	res.render("checkIn", { page: "admin", fromAdmin: true });
 });

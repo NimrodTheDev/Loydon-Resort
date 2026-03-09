@@ -1,0 +1,117 @@
+<script>
+    // public/asset/script/componentCreator.ts
+    console.log("componentCreator.ts");
+    window.elementCreator({
+        name: "setting-comp-two",
+        atr: [
+            "hotelname",
+            "email",
+            "phone",
+            "websiteurl",
+            "street",
+            "city",
+            "state",
+            "landmarks"
+        ],
+        pugFunc: settingCompHtml,
+        func: [
+            {
+                event: "click",
+                callback: (e) => {
+                    const target = e.target;
+                    if (target && target.tagName === "BUTTON" && target.getAttribute("type") === "button") {
+                        const formElement = target.closest("form");
+                        if (formElement) {
+                            const formData = {
+                                hotelName: formElement.querySelector('input[name="hotelName"]')?.value,
+                                email: formElement.querySelector('input[name="email"]')?.value,
+                                phone: formElement.querySelector('input[name="phone"]')?.value,
+                                websiteUrl: formElement.querySelector('input[name="websiteUrl"]')?.value,
+                                street: formElement.querySelector('input[name="street"]')?.value,
+                                city: formElement.querySelector('input[name="city"]')?.value,
+                                state: formElement.querySelector('input[name="state"]')?.value,
+                                landmarks: formElement.querySelector('textarea[name="landmarks"]')?.value
+                            };
+                            console.log("Settings Saved:", formData);
+                            alert("Settings saved! Check console.");
+                        }
+                    }
+                }
+            }
+        ]
+    });
+    // public/asset/script/settingCompHtml.ts
+    function settingCompHtml({ prop }) {
+        return `
+    <form action="#" method="POST" class="p-6 space-y-6">
+        <!-- Hotel details -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Hotel Name</label>
+                <input type="text" name="hotelName"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-hotel focus:border-hotel outline-none transition-all"
+                    placeholder="Loydon Resort" value="${prop.hotelname || ""}" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input type="email" name="email"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-hotel focus:border-hotel outline-none transition-all"
+                    placeholder="contact@loydonresort.com" value="${prop.email || ""}" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+                <input type="tel" name="phone"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-hotel focus:border-hotel outline-none transition-all"
+                    placeholder="+234..." value="${prop.phone || ""}" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
+                <input type="url" name="websiteUrl"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-hotel focus:border-hotel outline-none transition-all"
+                    placeholder="https://" value="${prop.websiteurl || ""}" />
+            </div>
+        </div>
+
+        <hr class="border-gray-100" />
+
+        <h3 class="text-lg font-medium text-gray-800">Address Details</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Street Address</label>
+                <input type="text" name="street"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-hotel focus:border-hotel outline-none transition-all"
+                    placeholder="123 Hotel Drive" value="${prop.street || ""}" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">City</label>
+                <input type="text" name="city"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-hotel focus:border-hotel outline-none transition-all"
+                    placeholder="City" value="${prop.city || ""}" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">State / Province</label>
+                <input type="text" name="state"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-hotel focus:border-hotel outline-none transition-all"
+                    placeholder="State" value="${prop.state || ""}" />
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Nearby Landmarks (comma
+                    separated)</label>
+                <textarea name="landmarks" rows="2"
+                    class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-hotel focus:border-hotel outline-none transition-all"
+                    placeholder="Landmark 1, Landmark 2">${prop.landmarks || ""}</textarea>
+            </div>
+        </div>
+
+        <div class="pt-6 flex justify-end gap-3 border-t border-gray-100 mt-6">
+            <a href="/admin"
+                class="px-5 py-2.5 text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-all">Cancel</a>
+            <button type="button"
+                class="px-5 py-2.5 bg-hotel text-white hover:bg-amber-600 rounded-lg font-medium shadow-sm transition-all focus:ring-2 focus:ring-offset-2 focus:ring-hotel">Save
+                Settings</button>
+        </div>
+    </form>
+    `;
+    }
+
+</script>
