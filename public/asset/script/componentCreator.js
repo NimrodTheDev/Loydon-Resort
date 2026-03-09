@@ -74,9 +74,13 @@ function elementCreator({
         }
     }
 
-    customElements.define(name, test);
-    if (typeof subscriber === 'function') subscriber(name);
-    return `<${name}></${name}>`;
+    if (customElements.get(name)) {
+        return `<${name}></${name}>`;
+    } else {
+        customElements.define(name, test);
+        if (typeof subscriber === 'function') subscriber(name);
+        return `<${name}></${name}>`;
+    }
 }
 
 // Make the element creator available globally
