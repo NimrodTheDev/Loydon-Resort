@@ -10,6 +10,10 @@ import {
 	addTransactionReferenceColumn,
 	addUniqueTransactionReferenceColumn,
 	addRoomImagePathColumn,
+	addNearbyLandmarksColumn,
+	addPoliciesColumn,
+	addPaymentsTable,
+	addPaymentMethodColumn
 } from "./migrations/alters.js";
 import apiRouter from "./routes/api.js";
 
@@ -30,7 +34,7 @@ import apiRouter from "./routes/api.js";
 	App.use("/api/", apiRouter);
 	App.use(express.static("public"));
 	App.use("/", router);
-	
+
 
 	// Run database migrations and seed data before starting the server
 	await runMigrations();
@@ -39,7 +43,12 @@ import apiRouter from "./routes/api.js";
 		.then(() => addUniqueTransactionReferenceColumn())
 		.then(() => addPasswordColumns())
 		.then(() => addRoomImagePathColumn())
+		.then(() => addNearbyLandmarksColumn())
+		.then(() => addPoliciesColumn())
+		.then(() => addPaymentsTable())
+		.then(() => addPaymentMethodColumn())
 		.then(() => seedDatabase())
+
 		.then(() => {
 			App.listen(3010, () =>
 				console.log("✅ Server listening on http://localhost:3010")

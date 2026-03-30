@@ -22,3 +22,43 @@
 <link rel="stylesheet" href="/css/nav.css" />
 <link rel="stylesheet" href="/css/general.css" />
 <script src="/asset/script/componentCreator.js"></script>
+
+<script>
+	// Global UI Helpers
+	window.showToast = function (message, type = "success") {
+		const container = document.getElementById("toast-container");
+		if (!container) return;
+
+		const toast = document.createElement("div");
+		toast.className = `p-4 rounded-lg shadow-lg text-white transform transition-all duration-300 translate-x-full pointer-events-auto flex items-center gap-2 min-w-[200px] ${
+			type === "success" ? "bg-green-600" : "bg-red-600"
+		}`;
+
+		toast.innerHTML = `
+			<span>${type === "success" ? "✅" : "❌"}</span>
+			<span class="font-medium">${message}</span>
+		`;
+
+		container.appendChild(toast);
+
+		// Slide in
+		setTimeout(() => toast.classList.remove("translate-x-full"), 10);
+
+		// Remove after 4 seconds
+		setTimeout(() => {
+			toast.classList.add("opacity-0", "translate-x-full");
+			setTimeout(() => toast.remove(), 300);
+		}, 4000);
+	};
+
+	window.toggleLoading = function (buttonEl, isLoading) {
+		if (!buttonEl) return;
+		if (isLoading) {
+			buttonEl.classList.add("btn-loading");
+			buttonEl.disabled = true;
+		} else {
+			buttonEl.classList.remove("btn-loading");
+			buttonEl.disabled = false;
+		}
+	};
+</script>

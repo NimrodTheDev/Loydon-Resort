@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<%- include('partials/head'); %>
+		<title>Payment Status | HotelExpress</title>
+		<link rel="stylesheet" href="/css/general.css" />
+	</head>
+	<body class="bg-bg">
+		<%- include('partials/nav'); %>
+
+		<div class="max-w-2xl mx-auto mt-12 px-4 mb-20">
+			<div class="bg-white p-8 rounded-xl shadow-lg text-center">
+				<!-- Icon Based on Status -->
+				<div class="mb-6">
+					<% if (status === 'PENDING') { %>
+					<svg class="mx-auto h-24 w-24 text-amber-500 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+					</svg>
+					<% } else { %>
+					<svg class="mx-auto h-24 w-24 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+					</svg>
+					<% } %>
+				</div>
+
+				<h1 class="text-4xl font-bold text-hotel mb-4">
+					<%= status === 'PENDING' ? 'Payment Pending' : 'Verification Failed' %>
+				</h1>
+
+				<p class="text-lg text-gray-700 mb-8">
+					<%= message || "We couldn't confirm your payment at this moment." %>
+				</p>
+
+				<% if (status === 'PENDING') { %>
+				<div class="bg-amber-50 border-l-4 border-amber-400 p-6 mb-8 text-left">
+					<p class="text-amber-700">
+						Your payment might still be processing. Please wait a few moments and refresh this page. If you have already received a debit alert, your booking will be confirmed automatically via our webhook within a few minutes.
+					</p>
+				</div>
+                <button onclick="window.location.reload()" class="btn mb-4 w-full">Refresh Status</button>
+				<% } %>
+
+				<!-- Payment Details -->
+				<div class="bg-gray-50 p-6 rounded-lg mb-8 text-left">
+					<h2 class="text-xl font-semibold text-hotel mb-4">Transaction Info</h2>
+					<div class="space-y-2">
+						<div class="flex justify-between">
+							<span class="text-gray-600">Reference:</span>
+							<span class="font-mono text-gray-800"><%= reference %></span>
+						</div>
+						<div class="flex justify-between">
+							<span class="text-gray-600">Status:</span>
+							<span class="font-semibold text-hotel"><%= status %></span>
+						</div>
+					</div>
+				</div>
+
+				<div class="flex flex-col gap-4">
+					<a href="/contact" class="text-hotel font-semibold hover:underline">Contact Support if this is an error</a>
+					<a href="/" class="btn-outline">Return to Home</a>
+				</div>
+			</div>
+		</div>
+
+		<%- include('partials/footer'); %>
+	</body>
+</html>

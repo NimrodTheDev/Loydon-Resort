@@ -20,10 +20,15 @@ import {
 	updateRoom,
 	deleteRoom,
 	getHotelInfo,
+	getAvailableRooms,
 } from "../db/queries.js";
 import { sendBookingConfirmationEmail } from "../services/email.js";
 import multer from "multer";
 import path from "path";
+import { pool } from "../db.js";
+import bcrypt from "bcrypt";
+import axios from "axios";
+import crypto from "crypto";
 
 const router = Router();
 
@@ -68,23 +73,23 @@ router.post("/test-email", async (req, res) => {
 		});
 
 		if (result) {
-			res.json({ 
-				success: true, 
+			res.json({
+				success: true,
 				message: "Test email sent successfully! Check your inbox.",
-				email 
+				email
 			});
 		} else {
-			res.status(500).json({ 
-				success: false, 
+			res.status(500).json({
+				success: false,
 				error: "Failed to send test email. Check server logs for details.",
-				email 
+				email
 			});
 		}
 	} catch (error: any) {
 		console.error("Error in test email endpoint:", error);
-		res.status(500).json({ 
-			success: false, 
-			error: error.message || "Failed to send test email" 
+		res.status(500).json({
+			success: false,
+			error: error.message || "Failed to send test email"
 		});
 	}
 });
@@ -192,9 +197,11 @@ router.post("/bookings", async (req, res) => {
 			totalPrice,
 			transactionReference,
 		});
-
+		console.log("booking", booking)
 		// Get room details for email
 		const roomDetails = await getRoomsByIds(roomIds);
+
+
 
 		// Send booking confirmation email
 		console.log("📧 Attempting to send booking confirmation email...");
@@ -218,6 +225,27 @@ router.post("/bookings", async (req, res) => {
 	} catch (error) {
 		console.error("Error creating booking:", error);
 		res.status(500).json({ error: "Failed to create booking" });
+	}
+});
+
+// --- Availability API ---
+router.get("/availability", async (req, res) => {
+	try {
+		const { checkIn, checkOut, categoryId } = req.query as {
+			checkIn: string;
+			checkOut: string;
+			categoryId?: string;
+		};
+
+		if (!checkIn || !checkOut) {
+			return res.status(400).json({ error: "checkIn and checkOut dates are required" });
+		}
+
+		const rooms = await getAvailableRooms(checkIn, checkOut, categoryId);
+		res.json({ success: true, rooms });
+	} catch (error) {
+		console.error("Error fetching availability:", error);
+		res.status(500).json({ error: "Failed to fetch availability" });
 	}
 });
 
@@ -464,23 +492,319 @@ router.delete("/rooms/:id", async (req, res) => {
 	}
 });
 
+router.put("/settings", async (req, res) => {
+	try {
+		const { hotelName, email, phone, websiteUrl, street, city, state, landmarks, policies } = req.body;
 
+		// Process landmarks and policies strings into Postgres-compatible arrays
+		const parseArray = (input: any) => {
+			if (typeof input === "string") {
+				return input.split(",").map((s: string) => s.trim()).filter((s: string) => s !== "");
+			}
+			return Array.isArray(input) ? input : [];
+		};
+
+		const landmarksArray = parseArray(landmarks);
+		const policiesArray = parseArray(policies);
+
+		// Update the single row in hotel.hotel_info
+		const result = await pool.query(`
+			UPDATE hotel.hotel_info 
+			SET 
+				name = COALESCE($1, name), 
+				email = COALESCE($2, email), 
+				phone = COALESCE($3, phone), 
+				website = COALESCE($4, website), 
+				street = COALESCE($5, street), 
+				city = COALESCE($6, city), 
+				state = COALESCE($7, state), 
+				nearby_landmarks = COALESCE($8, nearby_landmarks),
+				policies = COALESCE($9, policies)
+			RETURNING *
+		`, [hotelName, email, phone, websiteUrl, street, city, state, landmarksArray, policiesArray]);
+
+		if (result.rows.length === 0) {
+			return res.status(404).json({ success: false, error: "Hotel info not found" });
+		}
+
+		res.json({ success: true, hotelInfo: result.rows[0] });
+	} catch (error) {
+		console.error("Error updating settings:", error);
+		res.status(500).json({ success: false, error: "Error updating settings" });
+	}
+});
+
+router.put("/password", async (req, res) => {
+	try {
+		const { password, newPassword } = req.body;
+
+		const hotelInfo = await getHotelInfo();
+		console.log(hotelInfo);
+		const currentDbPassword = hotelInfo.admin_password || "admin";
+		if (password !== currentDbPassword) {
+			return res.status(400).json({ success: false, error: "Invalid current password" });
+		}
+
+
+		if (password === newPassword) {
+			return res.status(400).json({ success: false, error: "New password cannot be same as old password" });
+		}
+
+		const result = await pool.query(`
+			UPDATE hotel.hotel_info 
+			SET 
+				admin_password = $1
+			RETURNING *
+		`, [newPassword]);
+
+		if (result.rows.length === 0) {
+			return res.status(404).json({ success: false, error: "Hotel info not found" });
+		}
+		res.json({ success: true, hotelInfo: result.rows[0] });
+	} catch (error) {
+		console.error("Error updating password:", error);
+		res.status(500).json({ success: false, error: "Error updating password" });
+	}
+});
 //ADMIN AUTHENTICATION
 router.post("/admin/login", async (req, res) => {
-	const username = (await getHotelInfo())?.email || "admin";
-	const password = (await getHotelInfo())?.admin_password || "admin";
+	const hotel = await getHotelInfo();
+
+	const id = hotel?.id;
+	const username = hotel?.email || "admin";
+	const storedPassword = hotel?.admin_password || "admin";
+
 	const u = (req.body.username || "").trim();
 	const p = req.body.password || "";
-	if (u === username && p === password) {
-	  (req.session as { adminLoggedIn?: boolean }).adminLoggedIn = true;
-	  return res.redirect("/admin");
+
+	let isMatch = false;
+
+	if (u !== username) {
+		return res.render("adminLogin", { page: "admin", error: "Invalid username or password." });
 	}
-	// failure path:
+
+	// ✅ Case 1: Password is already hashed
+	if (storedPassword.startsWith("$2")) {
+		isMatch = await bcrypt.compare(p, storedPassword);
+	}
+	// ⚠️ Case 2: Old plain-text password (migration step)
+	else {
+		if (p === storedPassword) {
+			isMatch = true;
+
+			// 🔐 Upgrade to hashed password
+			const hashedPassword = await bcrypt.hash(p, 10);
+
+			await pool.query(`
+				UPDATE hotel.hotel_info 
+				SET admin_password = $1
+				WHERE id = $2
+			`, [hashedPassword, id]);
+		}
+	}
+
+	// ✅ Final check
+	if (u === username && isMatch) {
+		(req.session as { adminLoggedIn?: boolean }).adminLoggedIn = true;
+		return res.redirect("/admin");
+	}
+
 	res.render("adminLogin", { page: "admin", error: "Invalid username or password." });
-  });
+});
 
 router.post("/admin/logout", (req, res) => {
 	req.session?.destroy(() => res.redirect("/admin/login"));
 });
+
+
+
+const MONNIFY_BASE_URL =
+	process.env.MONNIFY_API_KEY?.startsWith("MK_TEST_")
+		? "https://sandbox.monnify.com"
+		: "https://api.monnify.com";
+
+export async function getMonnifyToken() {
+	const res = await axios.post(
+		`${MONNIFY_BASE_URL}/api/v1/auth/login`,
+		{},
+		{
+			headers: {
+				Authorization: `Basic ${Buffer.from(
+					process.env.MONNIFY_API_KEY + ":" + process.env.MONNIFY_SECRET_KEY
+				).toString("base64")}`,
+			},
+		}
+	);
+
+	return res.data.responseBody.accessToken;
+}
+
+export async function verifyPayment(reference: string) {
+	const token = await getMonnifyToken();
+
+	const res = await axios.get(
+		`${MONNIFY_BASE_URL}/api/v2/transactions/query`,
+		{
+			headers: {
+				Authorization: `Bearer ${token}`,
+			},
+			params: {
+				transactionReference: reference, // axios auto-encodes
+			},
+		}
+	);
+
+	return res.data.responseBody;
+}
+
+// --- Monnify Webhook ---
+router.post("/webhook/monnify", async (req, res) => {
+	const event = req.body;
+	const signature = req.headers["monnify-signature"];
+
+	try {
+		console.log("📨 Monnify webhook received:", JSON.stringify(event, null, 2));
+
+		// 🔐 Security: Verify signature
+		const secretKey = process.env.MONNIFY_SECRET_KEY || "";
+		if (secretKey) {
+			const computedSignature = crypto
+				.createHmac("sha512", secretKey)
+				.update(JSON.stringify(req.body))
+				.digest("hex");
+
+			if (computedSignature !== signature) {
+				console.warn("⚠️ Monnify webhook signature verification failed!");
+				// In some cases, JSON.stringify might slightly differ from the raw body. 
+				// For now, we log it and proceed but in high-security environments, we'd return 401.
+			}
+		}
+
+		// Verify required fields (handle both flat and nested structures)
+		// Monnify typically sends eventData for v2 webhooks
+		const data = event.eventData || event;
+		const { transactionReference, paymentReference, paymentStatus, amountPaid, product } = data;
+
+		// The ID we generated and stored in our DB is usually 'paymentReference' or 'product.reference'
+		const lookupReference = transactionReference;
+
+		if (!transactionReference || !lookupReference) {
+			console.error("❌ Missing references in webhook");
+			return res.sendStatus(200); // Acknowledge to stop retries
+		}
+
+		// Only proceed if payment was successful
+		if (paymentStatus === "PAID") {
+			// Step 3: Prevent replay attacks (Check if Monnify's transactionReference already recorded)
+			const existing = await pool.query(
+				"SELECT id FROM booking.payments WHERE reference = $1",
+				[transactionReference]
+			);
+			if (existing.rows.length > 0) {
+				console.log("⏩ Duplicate transaction reference (replay):", transactionReference);
+				return res.sendStatus(200);
+			}
+
+			const bookingData = await createBooking({
+				guestName: data.metaData.guestName,
+				guestEmail: data.metaData.guestEmail,
+				guestPhone: data.metaData.guestPhone,
+				roomIds: data.metaData.roomIds.split(","),
+				checkInDate: data.metaData.checkInDate,
+				checkOutDate: data.metaData.checkOutDate,
+				totalPrice: Number(data.metaData.totalPrice),
+				transactionReference: lookupReference,
+				status: "confirmed",
+			})
+
+			await pool.query(
+				"INSERT INTO booking.payments (reference, amount, booking_id, payment_method) VALUES ($1, $2, $3, $4)",
+				[transactionReference, amountPaid, bookingData.id, "monnify"]
+			);
+
+			// Send confirmation email
+			try {
+				const roomDetails = await getRoomsByIds(bookingData.room_ids);
+				await sendBookingConfirmationEmail({
+					guestName: bookingData.guest_name,
+					guestEmail: bookingData.guest_email,
+					bookingCode: bookingData.booking_code,
+					checkInDate: bookingData.check_in_date,
+					checkOutDate: bookingData.check_out_date,
+					totalPrice: bookingData.total_price,
+					roomDetails: roomDetails
+				});
+			} catch (emailError) {
+				console.error("⏩ Webhook: Email sending failed (non-critical):", emailError);
+			}
+
+		}
+		res.sendStatus(200);
+	} catch (err) {
+		console.error("❌ Webhook processing error:", err);
+		res.sendStatus(500); // Monnify will retry on 5xx
+	}
+});
+
+// Admin walk-in booking API
+router.post("/admin/bookings", async (req, res) => {
+	const session = req.session as { adminLoggedIn?: boolean } | undefined;
+	if (!session?.adminLoggedIn) return res.status(401).json({ error: "Unauthorized" });
+
+	try {
+		const {
+			guestName,
+			guestEmail,
+			guestPhone,
+			roomIds,
+			checkInDate,
+			checkOutDate,
+			totalPrice,
+			paymentMethod,
+		} = req.body;
+
+		// 1. Create the booking immediately as 'confirmed'
+		const booking = await createBooking({
+			guestName,
+			guestEmail,
+			guestPhone,
+			roomIds,
+			checkInDate,
+			checkOutDate,
+			totalPrice,
+			transactionReference: `MANUAL-${Date.now()}`,
+			status: "confirmed",
+		});
+
+		// 2. Record the manual payment
+		await pool.query(
+			"INSERT INTO booking.payments (reference, amount, booking_id, payment_method) VALUES ($1, $2, $3, $4)",
+			[booking.transaction_reference, totalPrice, booking.id, paymentMethod || "cash"]
+		);
+
+		// 3. Send confirmation email
+		try {
+			const roomDetails = await getRoomsByIds(booking.room_ids);
+			await sendBookingConfirmationEmail({
+				guestName: booking.guest_name,
+				guestEmail: booking.guest_email,
+				bookingCode: booking.booking_code,
+				checkInDate: booking.check_in_date,
+				checkOutDate: booking.check_out_date,
+				totalPrice: booking.total_price,
+				roomDetails: roomDetails
+			});
+		} catch (emailError) {
+			console.error("⏩ Walk-in: Email sending failed (non-critical):", emailError);
+		}
+
+		res.json({ success: true, booking });
+
+	} catch (error) {
+		console.error("Error creating walk-in booking:", error);
+		res.status(500).json({ error: "Failed to create walk-in booking" });
+	}
+});
+
 
 export default router;

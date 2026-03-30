@@ -33,7 +33,8 @@
                     <setting-comp-two hotelname="<%= hotelInfo.name %>" email="<%= hotelInfo.email %>"
                         phone="<%= hotelInfo.phone %>" websiteurl="<%= hotelInfo.website %>"
                         street="<%= hotelInfo.street %>" city="<%= hotelInfo.city %>" state="<%= hotelInfo.state %>"
-                        landmarks="<%= hotelInfo.nearbyLandmarks ? hotelInfo.nearbyLandmarks.join(', ') : '' %>"></setting-comp-two>
+                        landmarks="<%= hotelInfo.nearby_landmarks ? hotelInfo.nearby_landmarks.join(', ') : '' %>"
+                        policies="<%= hotelInfo.policies ? hotelInfo.policies.join(', ') : '' %>"></setting-comp-two>
             </div>
 
             <!-- Security Section -->
@@ -42,27 +43,8 @@
                     <h2 class="text-xl font-semibold text-gray-800">Security & Authentication</h2>
                     <p class="text-sm text-gray-500 mt-1">Manage admin access password and security preferences.</p>
                 </div>
-                <form action="#" method="POST" class="p-6 space-y-5">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Current Password</label>
-                            <input type="password" name="currentPassword"
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-gray-800 focus:border-gray-800 outline-none transition-all"
-                                placeholder="••••••••" />
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">New Password</label>
-                            <input type="password" name="newPassword"
-                                class="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-gray-800 focus:border-gray-800 outline-none transition-all"
-                                placeholder="••••••••" />
-                        </div>
-                    </div>
-                    <div class="flex justify-end pt-2">
-                        <button type="button"
-                            class="px-5 py-2.5 bg-gray-800 text-white hover:bg-gray-900 rounded-lg font-medium shadow-sm transition-all">Update
-                            Password</button>
-                    </div>
-                </form>
+                <%- include('components/passwordComp', hotelInfo); %>
+                    <password-comp></password-comp>
             </div>
         </div>
 

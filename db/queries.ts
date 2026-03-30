@@ -81,6 +81,7 @@ export const createBooking = async (bookingData: {
 	checkOutDate: string;
 	totalPrice: number;
 	transactionReference?: string;
+	status?: string;
 }) => {
 	const {
 		guestName,
@@ -91,6 +92,7 @@ export const createBooking = async (bookingData: {
 		checkOutDate,
 		totalPrice,
 		transactionReference,
+		status,
 	} = bookingData;
 
 	// Generate unique booking code
@@ -98,8 +100,8 @@ export const createBooking = async (bookingData: {
 
 	const result = await query(
 		`
-		INSERT INTO booking.bookings (guest_name, guest_email, guest_phone, room_ids, check_in_date, check_out_date, total_price, booking_code, transaction_reference)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO booking.bookings (guest_name, guest_email, guest_phone, room_ids, check_in_date, check_out_date, total_price, booking_code, transaction_reference, status)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING *;
 	`,
 		[
@@ -112,6 +114,7 @@ export const createBooking = async (bookingData: {
 			totalPrice,
 			bookingCode,
 			transactionReference || null,
+			status || 'pending',
 		]
 	);
 
@@ -146,18 +149,25 @@ export const getBookings = async (limit = 100, offset = 0) => {
 	const result = await query(
 		`
 		SELECT 
-			id, guest_name, guest_email, guest_phone, room_ids, 
-			check_in_date, check_out_date, total_price, status,
-			booking_code, check_in_status, checked_in_at, created_at,
-			transaction_reference
-		FROM booking.bookings 
-		ORDER BY created_at DESC
+			b.id, b.guest_name, b.guest_email, b.guest_phone, b.room_ids, 
+			b.check_in_date, b.check_out_date, b.total_price, b.status,
+			b.booking_code, b.check_in_status, b.checked_in_at, b.created_at,
+			b.transaction_reference,
+			p.payment_method
+		FROM booking.bookings b
+		LEFT JOIN (
+			SELECT DISTINCT ON (booking_id) booking_id, payment_method 
+			FROM booking.payments 
+			ORDER BY booking_id, created_at DESC
+		) p ON b.id = p.booking_id
+		ORDER BY b.created_at DESC
 		LIMIT $1 OFFSET $2
 	`,
 		[limit, offset]
 	);
 	return result.rows;
 };
+
 
 // Get booking by code for check-in
 export const getBookingByCode = async (code: string) => {
@@ -263,6 +273,37 @@ export const getRoomDetailsByIds = async (
 		};
 	});
 	return map;
+};
+
+// Get available rooms for a given date range
+export const getAvailableRooms = async (checkIn: string, checkOut: string, categoryId?: string) => {
+	const params = [checkIn, checkOut];
+	if (categoryId) params.push(categoryId);
+
+	const result = await query(
+		`
+		SELECT 
+			r.id,
+			r.room_number,
+			r.floor,
+			rc.name as category_name,
+			rc.price,
+			rc.id as category_id
+		FROM hotel.rooms r
+		JOIN hotel.room_categories rc ON r.room_category_id = rc.id
+		WHERE r.is_active = true
+		${categoryId ? "AND rc.id = $3" : ""}
+		AND r.id NOT IN (
+			SELECT DISTINCT unnest(room_ids)
+			FROM booking.bookings
+			WHERE (check_in_date < $2) AND (check_out_date > $1)
+			  AND status != 'cancelled'
+		)
+		ORDER BY r.room_number;
+	`,
+		params
+	);
+	return result.rows;
 };
 
 // --- Amenities CRUD ---

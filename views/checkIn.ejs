@@ -1,347 +1,326 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<%- include('partials/head'); %>
+
+<head>
+	<%- include('partials/head'); %>
 		<title>Check In | HotelExpress</title>
 		<link rel="stylesheet" href="/css/general.css" />
-	</head>
-	<body class="bg-bg">
-		<%- include('partials/nav'); %>
+</head>
+
+<body class="bg-bg">
+	<%- include('partials/nav'); %>
 
 		<div class="max-w-4xl mx-auto mt-12 px-4 mb-20">
-			<% if (typeof fromAdmin !== 'undefined' && fromAdmin) { %>
-			<div class="mb-4 flex items-center gap-4">
-				<a href="/admin" class="text-gray-600 hover:text-hotel">← Admin</a>
-				<form method="post" action="/admin/logout" class="inline">
-					<button type="submit" class="text-gray-500 hover:text-red-600 text-sm">Log out</button>
-				</form>
-			</div>
-			<% } %>
-			<h1 class="text-4xl font-bold text-hotel mb-6 text-center">
-				Booking Lookup & Check-In
-			</h1>
-
-			<!-- Booking Code Input Form -->
-			<div class="bg-white p-8 rounded-xl shadow-lg mb-8">
-				<h2 class="text-2xl font-semibold text-hotel mb-4">
-					Enter Booking Code
-				</h2>
-
-				<form id="bookingCodeForm" class="space-y-4">
-					<div>
-						<label
-							for="bookingCode"
-							class="block text-sm font-medium mb-1"
-						>
-							Booking Code
-						</label>
-						<input
-							type="text"
-							id="bookingCode"
-							name="bookingCode"
-							placeholder="e.g., HXL-A1B2C3"
-							required
-							class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent uppercase"
-							pattern="[A-Z0-9-]+"
-						/>
-						<p class="text-sm text-gray-500 mt-1">
-							Enter the booking code from your confirmation email
-						</p>
-					</div>
-
-					<button type="submit" class="btn w-full">Lookup Booking</button>
-				</form>
-
-				<!-- Error Message -->
-				<div id="errorMessage" class="hidden mt-4 p-4 bg-red-50 border-l-4 border-red-400 rounded">
-					<div class="flex">
-						<div class="flex-shrink-0">
-							<svg
-								class="h-5 w-5 text-red-400"
-								fill="currentColor"
-								viewBox="0 0 20 20"
-							>
-								<path
-									fill-rule="evenodd"
-									d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-									clip-rule="evenodd"
-								></path>
-							</svg>
-						</div>
-						<div class="ml-3">
-							<p id="errorText" class="text-sm text-red-700"></p>
-						</div>
-					</div>
+			<% if (typeof fromAdmin !=='undefined' && fromAdmin) { %>
+				<div class="mb-4 flex items-center gap-4">
+					<a href="/admin" class="text-gray-600 hover:text-hotel">← Admin</a>
+					<form method="post" action="/admin/logout" class="inline">
+						<button type="submit" class="text-gray-500 hover:text-red-600 text-sm">Log out</button>
+					</form>
 				</div>
-			</div>
+				<% } %>
+					<h1 class="text-4xl font-bold text-hotel mb-6 text-center">
+						Booking Lookup & Check-In
+					</h1>
 
-			<!-- Booking Details Display -->
-			<div id="bookingDetails" class="hidden bg-white p-8 rounded-xl shadow-lg">
-				<!-- Booking Header -->
-				<div class="mb-6">
-					<div class="flex items-center justify-between mb-4">
-						<h2 class="text-2xl font-semibold text-hotel">Booking Details</h2>
-						<span
-							id="checkInStatus"
-							class="px-4 py-2 rounded-full text-sm font-semibold"
-						></span>
-					</div>
-					<div class="text-3xl font-bold text-hotel" id="bookingCodeDisplay">
-						HXL-XXXXXX
-					</div>
-				</div>
+					<!-- Booking Code Input Form -->
+					<div class="bg-white p-8 rounded-xl shadow-lg mb-8">
+						<h2 class="text-2xl font-semibold text-hotel mb-4">
+							Enter Booking Code
+						</h2>
 
-				<!-- Guest Information -->
-				<div class="bg-gray-50 p-6 rounded-lg mb-6">
-					<h3 class="text-xl font-semibold text-hotel mb-4">
-						Guest Information
-					</h3>
-					<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-						<div>
-							<span class="text-gray-600">Name:</span>
-							<span id="guestName" class="font-semibold ml-2 text-gray-800"
-								>John Doe</span
-							>
-						</div>
-						<div>
-							<span class="text-gray-600">Email:</span>
-							<span id="guestEmail" class="font-semibold ml-2 text-gray-800"
-								>john@example.com</span
-							>
-						</div>
-						<div id="phoneContainer" class="hidden">
-							<span class="text-gray-600">Phone:</span>
-							<span id="guestPhone" class="font-semibold ml-2 text-gray-800"
-								>08012345678</span
-							>
-						</div>
-					</div>
-				</div>
+						<form id="bookingCodeForm" class="space-y-4">
+							<div>
+								<label for="bookingCode" class="block text-sm font-medium mb-1">
+									Booking Code
+								</label>
+								<input type="text" id="bookingCode" name="bookingCode" placeholder="e.g., HXL-A1B2C3"
+									required
+									class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent uppercase"
+									pattern="[A-Z0-9-]+" />
+								<p class="text-sm text-gray-500 mt-1">
+									Enter the booking code from your confirmation email
+								</p>
+							</div>
 
-				<!-- Booking Dates -->
-				<div class="bg-gray-50 p-6 rounded-lg mb-6">
-					<h3 class="text-xl font-semibold text-hotel mb-4">
-						Booking Dates
-					</h3>
-					<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-						<div>
-							<span class="text-gray-600">Check-in:</span>
-							<div id="checkInDate" class="font-semibold text-gray-800">
-								Jan 1, 2024
+							<button type="submit" class="btn w-full">Lookup Booking</button>
+						</form>
+
+						<!-- Error Message -->
+						<div id="errorMessage" class="hidden mt-4 p-4 bg-red-50 border-l-4 border-red-400 rounded">
+							<div class="flex">
+								<div class="flex-shrink-0">
+									<svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+										<path fill-rule="evenodd"
+											d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+											clip-rule="evenodd"></path>
+									</svg>
+								</div>
+								<div class="ml-3">
+									<p id="errorText" class="text-sm text-red-700"></p>
+								</div>
 							</div>
 						</div>
-						<div>
-							<span class="text-gray-600">Check-out:</span>
-							<div id="checkOutDate" class="font-semibold text-gray-800">
-								Jan 5, 2024
+					</div>
+
+					<!-- Booking Details Display -->
+					<div id="bookingDetails" class="hidden bg-white p-8 rounded-xl shadow-lg">
+						<!-- Booking Header -->
+						<div class="mb-6">
+							<div class="flex items-center justify-between mb-4">
+								<h2 class="text-2xl font-semibold text-hotel">Booking Details</h2>
+								<span id="checkInStatus" class="px-4 py-2 rounded-full text-sm font-semibold"></span>
+							</div>
+							<div class="text-3xl font-bold text-hotel" id="bookingCodeDisplay">
+								HXL-XXXXXX
 							</div>
 						</div>
-						<div>
-							<span class="text-gray-600">Nights:</span>
-							<div id="nights" class="font-semibold text-gray-800">4</div>
+
+						<!-- Guest Information -->
+						<div class="bg-gray-50 p-6 rounded-lg mb-6">
+							<h3 class="text-xl font-semibold text-hotel mb-4">
+								Guest Information
+							</h3>
+							<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+								<div>
+									<span class="text-gray-600">Name:</span>
+									<span id="guestName" class="font-semibold ml-2 text-gray-800">John Doe</span>
+								</div>
+								<div>
+									<span class="text-gray-600">Email:</span>
+									<span id="guestEmail"
+										class="font-semibold ml-2 text-gray-800">john@example.com</span>
+								</div>
+								<div id="phoneContainer" class="hidden">
+									<span class="text-gray-600">Phone:</span>
+									<span id="guestPhone" class="font-semibold ml-2 text-gray-800">08012345678</span>
+								</div>
+							</div>
+						</div>
+
+						<!-- Booking Dates -->
+						<div class="bg-gray-50 p-6 rounded-lg mb-6">
+							<h3 class="text-xl font-semibold text-hotel mb-4">
+								Booking Dates
+							</h3>
+							<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+								<div>
+									<span class="text-gray-600">Check-in:</span>
+									<div id="checkInDate" class="font-semibold text-gray-800">
+										Jan 1, 2024
+									</div>
+								</div>
+								<div>
+									<span class="text-gray-600">Check-out:</span>
+									<div id="checkOutDate" class="font-semibold text-gray-800">
+										Jan 5, 2024
+									</div>
+								</div>
+								<div>
+									<span class="text-gray-600">Nights:</span>
+									<div id="nights" class="font-semibold text-gray-800">4</div>
+								</div>
+							</div>
+						</div>
+
+						<!-- Room Details -->
+						<div class="bg-gray-50 p-6 rounded-lg mb-6">
+							<h3 class="text-xl font-semibold text-hotel mb-4">Room Details</h3>
+							<div id="roomList" class="space-y-2">
+								<!-- Rooms will be populated here -->
+							</div>
+						</div>
+
+						<!-- Payment Information -->
+						<div class="bg-gray-50 p-6 rounded-lg mb-6">
+							<h3 class="text-xl font-semibold text-hotel mb-4">
+								Payment Information
+							</h3>
+							<div class="flex justify-between items-center">
+								<span class="text-gray-600">Total Amount:</span>
+								<span id="totalPrice" class="text-2xl font-bold text-hotel">₦0</span>
+							</div>
+							<div id="checkedInAtContainer" class="mt-4 pt-4 border-t border-gray-300 hidden">
+								<span class="text-gray-600">Checked in at:</span>
+								<span id="checkedInAt" class="font-semibold ml-2 text-gray-800"></span>
+							</div>
+						</div>
+
+						<!-- Check-In Button -->
+						<div class="flex gap-4">
+							<button id="checkInButton" class="btn flex-1 bg-green-600 hover:bg-green-700">
+								Check In Guest
+							</button>
+							<button id="refreshButton" class="btn bg-gray-600 hover:bg-gray-700">
+								Refresh
+							</button>
 						</div>
 					</div>
-				</div>
-
-				<!-- Room Details -->
-				<div class="bg-gray-50 p-6 rounded-lg mb-6">
-					<h3 class="text-xl font-semibold text-hotel mb-4">Room Details</h3>
-					<div id="roomList" class="space-y-2">
-						<!-- Rooms will be populated here -->
-					</div>
-				</div>
-
-				<!-- Payment Information -->
-				<div class="bg-gray-50 p-6 rounded-lg mb-6">
-					<h3 class="text-xl font-semibold text-hotel mb-4">
-						Payment Information
-					</h3>
-					<div class="flex justify-between items-center">
-						<span class="text-gray-600">Total Amount:</span>
-						<span id="totalPrice" class="text-2xl font-bold text-hotel"
-							>₦0</span
-						>
-					</div>
-					<div id="checkedInAtContainer" class="mt-4 pt-4 border-t border-gray-300 hidden">
-						<span class="text-gray-600">Checked in at:</span>
-						<span id="checkedInAt" class="font-semibold ml-2 text-gray-800"></span>
-					</div>
-				</div>
-
-				<!-- Check-In Button -->
-				<div class="flex gap-4">
-					<button
-						id="checkInButton"
-						class="btn flex-1 bg-green-600 hover:bg-green-700"
-					>
-						Check In Guest
-					</button>
-					<button
-						id="refreshButton"
-						class="btn bg-gray-600 hover:bg-gray-700"
-					>
-						Refresh
-					</button>
-				</div>
-			</div>
 		</div>
 
 		<%- include('partials/footer'); %>
 
-		<script>
-			const bookingCodeForm = document.getElementById("bookingCodeForm");
-			const bookingCodeInput = document.getElementById("bookingCode");
-			const bookingDetails = document.getElementById("bookingDetails");
-			const errorMessage = document.getElementById("errorMessage");
-			const errorText = document.getElementById("errorText");
-			const checkInButton = document.getElementById("checkInButton");
-			const refreshButton = document.getElementById("refreshButton");
+			<script>
+				const bookingCodeForm = document.getElementById("bookingCodeForm");
+				const bookingCodeInput = document.getElementById("bookingCode");
+				const bookingDetails = document.getElementById("bookingDetails");
+				const errorMessage = document.getElementById("errorMessage");
+				const errorText = document.getElementById("errorText");
+				const checkInButton = document.getElementById("checkInButton");
+				const refreshButton = document.getElementById("refreshButton");
+				const urlParams = new URLSearchParams(window.location.search);
+				const prefilledCode = urlParams.get("code");
+				bookingCodeInput.value = prefilledCode;
 
-			let currentBookingCode = "";
+				let currentBookingCode = "";
 
-			// Format date for display
-			function formatDate(dateString) {
-				const date = new Date(dateString);
-				return date.toLocaleDateString("en-US", {
-					weekday: "long",
-					year: "numeric",
-					month: "long",
-					day: "numeric",
-				});
-			}
-
-			// Calculate nights between dates
-			function calculateNights(checkIn, checkOut) {
-				const start = new Date(checkIn);
-				const end = new Date(checkOut);
-				const diffTime = Math.abs(end - start);
-				const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-				return diffDays;
-			}
-
-			// Lookup booking
-			bookingCodeForm.addEventListener("submit", async (e) => {
-				e.preventDefault();
-
-				const code = bookingCodeInput.value.trim().toUpperCase();
-				if (!code) {
-					showError("Please enter a booking code");
-					return;
+				// Format date for display
+				function formatDate(dateString) {
+					const date = new Date(dateString);
+					return date.toLocaleDateString("en-US", {
+						weekday: "long",
+						year: "numeric",
+						month: "long",
+						day: "numeric",
+					});
 				}
 
-				// Hide previous errors
-				errorMessage.classList.add("hidden");
-				bookingDetails.classList.add("hidden");
+				// Calculate nights between dates
+				function calculateNights(checkIn, checkOut) {
+					const start = new Date(checkIn);
+					const end = new Date(checkOut);
+					const diffTime = Math.abs(end - start);
+					const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+					return diffDays;
+				}
 
-				try {
-					const response = await fetch(`/api/booking/${code}`);
-					const data = await response.json();
+				// Lookup booking
+				bookingCodeForm.addEventListener("submit", async (e) => {
+					e.preventDefault();
+					const submitBtn = e.target.querySelector('button[type="submit"]');
 
-					if (!response.ok) {
-						showError(data.error || "Booking not found");
+					const code = bookingCodeInput.value.trim().toUpperCase();
+					if (!code) {
+						showError("Please enter a booking code");
 						return;
 					}
 
-					displayBooking(data.booking);
-					currentBookingCode = code;
-				} catch (error) {
-					console.error("Error fetching booking:", error);
-					showError("Failed to fetch booking. Please try again.");
+					toggleLoading(submitBtn, true);
+					// Hide previous errors
+					errorMessage.classList.add("hidden");
+					bookingDetails.classList.add("hidden");
+
+					try {
+						const response = await fetch(`/api/booking/${code}`);
+						const data = await response.json();
+
+						if (!response.ok) {
+							showError(data.error || "Booking not found");
+							return;
+						}
+
+						displayBooking(data.booking);
+						currentBookingCode = code;
+					} catch (error) {
+						console.error("Error fetching booking:", error);
+						showError("Failed to fetch booking. Please try again.");
+					} finally {
+						toggleLoading(submitBtn, false);
+					}
+				});
+
+				// Display booking information
+				function displayBooking(booking) {
+					// Hide error message
+					errorMessage.classList.add("hidden");
+					bookingDetails.classList.remove("hidden");
+
+					// Set booking code
+					document.getElementById("bookingCodeDisplay").textContent =
+						booking.booking_code;
+
+					// Set guest information
+					document.getElementById("guestName").textContent = booking.guest_name;
+					document.getElementById("guestEmail").textContent = booking.guest_email;
+
+					// Show/hide phone number
+					const phoneContainer = document.getElementById("phoneContainer");
+					const phoneEl = document.getElementById("guestPhone");
+					if (booking.guest_phone) {
+						phoneEl.textContent = booking.guest_phone;
+						phoneContainer.classList.remove("hidden");
+					} else {
+						phoneContainer.classList.add("hidden");
+					}
+
+					// Set dates
+					document.getElementById("checkInDate").textContent = formatDate(
+						booking.check_in_date
+					);
+					document.getElementById("checkOutDate").textContent = formatDate(
+						booking.check_out_date
+					);
+					document.getElementById("nights").textContent =
+						calculateNights(booking.check_in_date, booking.check_out_date) +
+						" night" +
+						(calculateNights(booking.check_in_date, booking.check_out_date) > 1
+							? "s"
+							: "");
+
+					// Set total price
+					document.getElementById(
+						"totalPrice"
+					).textContent = `₦${parseInt(booking.total_price).toLocaleString()}`;
+
+					// Set check-in status
+					const statusEl = document.getElementById("checkInStatus");
+					if (booking.check_in_status === "checked_in") {
+						statusEl.textContent = "✓ Checked In";
+						statusEl.className =
+							"px-4 py-2 rounded-full text-sm font-semibold bg-green-100 text-green-800";
+						checkInButton.disabled = true;
+						checkInButton.textContent = "Already Checked In";
+						checkInButton.className =
+							"btn flex-1 bg-gray-400 cursor-not-allowed";
+					} else {
+						statusEl.textContent = "Pending Check-in";
+						statusEl.className =
+							"px-4 py-2 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800";
+						checkInButton.disabled = false;
+						checkInButton.textContent = "Check In Guest";
+						checkInButton.className =
+							"btn flex-1 bg-green-600 hover:bg-green-700";
+					}
+
+					// Set checked in time if available
+					const checkedInAtContainer = document.getElementById("checkedInAtContainer");
+					if (booking.checked_in_at) {
+						document.getElementById("checkedInAt").textContent = new Date(
+							booking.checked_in_at
+						).toLocaleString();
+						checkedInAtContainer.classList.remove("hidden");
+					} else {
+						checkedInAtContainer.classList.add("hidden");
+					}
+
+					// Display room details
+					displayRoomDetails(booking.room_details || []);
+
+					currentBookingCode = booking.booking_code;
 				}
-			});
 
-			// Display booking information
-			function displayBooking(booking) {
-				// Hide error message
-				errorMessage.classList.add("hidden");
-				bookingDetails.classList.remove("hidden");
+				// Display room details
+				function displayRoomDetails(roomDetails) {
+					const roomListEl = document.getElementById("roomList");
 
-				// Set booking code
-				document.getElementById("bookingCodeDisplay").textContent =
-					booking.booking_code;
+					if (!roomDetails || roomDetails.length === 0) {
+						roomListEl.innerHTML = "<p class='text-gray-600'>No room details available</p>";
+						return;
+					}
 
-				// Set guest information
-				document.getElementById("guestName").textContent = booking.guest_name;
-				document.getElementById("guestEmail").textContent = booking.guest_email;
-				
-				// Show/hide phone number
-				const phoneContainer = document.getElementById("phoneContainer");
-				const phoneEl = document.getElementById("guestPhone");
-				if (booking.guest_phone) {
-					phoneEl.textContent = booking.guest_phone;
-					phoneContainer.classList.remove("hidden");
-				} else {
-					phoneContainer.classList.add("hidden");
-				}
-
-				// Set dates
-				document.getElementById("checkInDate").textContent = formatDate(
-					booking.check_in_date
-				);
-				document.getElementById("checkOutDate").textContent = formatDate(
-					booking.check_out_date
-				);
-				document.getElementById("nights").textContent =
-					calculateNights(booking.check_in_date, booking.check_out_date) +
-					" night" +
-					(calculateNights(booking.check_in_date, booking.check_out_date) > 1
-						? "s"
-						: "");
-
-				// Set total price
-				document.getElementById(
-					"totalPrice"
-				).textContent = `₦${parseInt(booking.total_price).toLocaleString()}`;
-
-				// Set check-in status
-				const statusEl = document.getElementById("checkInStatus");
-				if (booking.check_in_status === "checked_in") {
-					statusEl.textContent = "✓ Checked In";
-					statusEl.className =
-						"px-4 py-2 rounded-full text-sm font-semibold bg-green-100 text-green-800";
-					checkInButton.disabled = true;
-					checkInButton.textContent = "Already Checked In";
-					checkInButton.className =
-						"btn flex-1 bg-gray-400 cursor-not-allowed";
-				} else {
-					statusEl.textContent = "Pending Check-in";
-					statusEl.className =
-						"px-4 py-2 rounded-full text-sm font-semibold bg-yellow-100 text-yellow-800";
-					checkInButton.disabled = false;
-					checkInButton.textContent = "Check In Guest";
-					checkInButton.className =
-						"btn flex-1 bg-green-600 hover:bg-green-700";
-				}
-
-				// Set checked in time if available
-				const checkedInAtContainer = document.getElementById("checkedInAtContainer");
-				if (booking.checked_in_at) {
-					document.getElementById("checkedInAt").textContent = new Date(
-						booking.checked_in_at
-					).toLocaleString();
-					checkedInAtContainer.classList.remove("hidden");
-				} else {
-					checkedInAtContainer.classList.add("hidden");
-				}
-
-			// Display room details
-			displayRoomDetails(booking.room_details || []);
-
-				currentBookingCode = booking.booking_code;
-			}
-
-			// Display room details
-			function displayRoomDetails(roomDetails) {
-				const roomListEl = document.getElementById("roomList");
-				
-				if (!roomDetails || roomDetails.length === 0) {
-					roomListEl.innerHTML = "<p class='text-gray-600'>No room details available</p>";
-					return;
-				}
-
-				roomListEl.innerHTML = roomDetails
-					.map(
-						(room) => `
+					roomListEl.innerHTML = roomDetails
+						.map(
+							(room) => `
 					<div class="bg-white p-4 rounded-lg border border-gray-200">
 						<div class="flex justify-between items-center">
 							<div>
@@ -351,78 +330,88 @@
 						</div>
 					</div>
 				`
-					)
-					.join("");
-			}
-
-			// Check in guest
-			checkInButton.addEventListener("click", async () => {
-				if (!currentBookingCode) {
-					showError("No booking code selected");
-					return;
+						)
+						.join("");
 				}
 
-				if (
-					!confirm(
-						`Are you sure you want to check in the guest with booking code ${currentBookingCode}?`
-					)
-				) {
-					return;
-				}
-
-				try {
-					const response = await fetch("/api/checkin", {
-						method: "POST",
-						headers: {
-							"Content-Type": "application/json",
-						},
-						body: JSON.stringify({ code: currentBookingCode }),
-					});
-
-					const data = await response.json();
-
-					if (!response.ok) {
-						showError(data.error || "Failed to check in guest");
+				// Check in guest
+				checkInButton.addEventListener("click", async () => {
+					if (!currentBookingCode) {
+						showError("No booking code selected");
 						return;
 					}
 
-					// Success - refresh booking details
-					alert("Guest checked in successfully!");
-					displayBooking(data.booking);
-				} catch (error) {
-					console.error("Error checking in guest:", error);
-					showError("Failed to check in guest. Please try again.");
-				}
-			});
-
-			// Refresh booking details
-			refreshButton.addEventListener("click", async () => {
-				if (!currentBookingCode) {
-					return;
-				}
-
-				try {
-					const response = await fetch(`/api/booking/${currentBookingCode}`);
-					const data = await response.json();
-
-					if (!response.ok) {
-						showError(data.error || "Failed to refresh booking");
+					if (
+						!confirm(
+							`Are you sure you want to check in the guest with booking code ${currentBookingCode}?`
+						)
+					) {
 						return;
 					}
 
-					displayBooking(data.booking);
-				} catch (error) {
-					console.error("Error refreshing booking:", error);
-					showError("Failed to refresh booking. Please try again.");
-				}
-			});
+					toggleLoading(checkInButton, true);
 
-			// Show error message
-			function showError(message) {
-				errorText.textContent = message;
-				errorMessage.classList.remove("hidden");
-				bookingDetails.classList.add("hidden");
-			}
-		</script>
-	</body>
+					try {
+						const response = await fetch("/api/checkin", {
+							method: "POST",
+							headers: {
+								"Content-Type": "application/json",
+							},
+							body: JSON.stringify({ code: currentBookingCode }),
+						});
+
+						const data = await response.json();
+
+						if (!response.ok) {
+							showToast(data.error || "Failed to check in guest", "error");
+							toggleLoading(checkInButton, false);
+							return;
+						}
+
+						// Success - refresh booking details
+						showToast("Guest checked in successfully!");
+						displayBooking(data.booking);
+					} catch (error) {
+						console.error("Error checking in guest:", error);
+						showToast("Failed to check in guest", "error");
+						toggleLoading(checkInButton, false);
+					}
+				});
+
+				// Refresh booking details
+				refreshButton.addEventListener("click", async () => {
+					if (!currentBookingCode) {
+						return;
+					}
+
+					toggleLoading(refreshButton, true);
+
+					try {
+						const response = await fetch(`/api/booking/${currentBookingCode}`);
+						const data = await response.json();
+
+						if (!response.ok) {
+							showToast(data.error || "Failed to refresh booking", "error");
+							return;
+						}
+
+						displayBooking(data.booking);
+						showToast("Booking details refreshed");
+					} catch (error) {
+						console.error("Error refreshing booking:", error);
+						showToast("Failed to refresh booking", "error");
+					} finally {
+						toggleLoading(refreshButton, false);
+					}
+				});
+
+				// Show error message
+				function showError(message) {
+					errorText.textContent = message;
+					errorMessage.classList.remove("hidden");
+					bookingDetails.classList.add("hidden");
+				}
+			</script>
+</body>
+
 </html>

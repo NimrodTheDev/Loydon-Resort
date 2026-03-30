@@ -1,24 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<%- include('partials/head'); %>
+
+<head>
+	<%- include('partials/head'); %>
 		<title>Book <%= room.name %> | HotelExpress</title>
 
 		<script src="https://sdk.monnify.com/plugin/monnify.js"></script>
-	</head>
+</head>
 
-	<body class="bg-bg">
-		<%- include('partials/nav'); %>
+<body class="bg-bg">
+	<%- include('partials/nav'); %>
 
 		<div class="max-w-4xl mx-auto mt-12 px-4 mb-20">
-			<h1 class="text-4xl font-bold text-hotel mb-6">Book <%= room.name %></h1>
+			<h1 class="text-4xl font-bold text-hotel mb-6">Book <%= room.name %>
+			</h1>
 
 			<div class="bg-white p-8 rounded-xl shadow-lg">
 				<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
 					<!-- Room Summary -->
 					<div>
 						<h2 class="text-2xl font-semibold text-hotel mb-4">Room Details</h2>
-						<p><strong>Room Type:</strong> <%= room.name %></p>
+						<p><strong>Room Type:</strong>
+							<%= room.name %>
+						</p>
 						<p>
 							<strong>Price:</strong>
 							₦<%= room.price.toLocaleString() %> / night
@@ -37,38 +41,24 @@
 								<label class="block text-sm font-medium mb-1">
 									Full Name *
 								</label>
-								<input
-									type="text"
-									id="guestName"
-									name="guestName"
-									required
-									class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent"
-								/>
+								<input type="text" id="guestName" name="guestName" required
+									class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent" />
 							</div>
 
 							<div>
 								<label class="block text-sm font-medium mb-1">
 									Email Address *
 								</label>
-								<input
-									type="email"
-									id="guestEmail"
-									name="guestEmail"
-									required
-									class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent"
-								/>
+								<input type="email" id="guestEmail" name="guestEmail" required
+									class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent" />
 							</div>
 
 							<div>
 								<label class="block text-sm font-medium mb-1">
 									Phone Number
 								</label>
-								<input
-									type="tel"
-									id="guestPhone"
-									name="guestPhone"
-									class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent"
-								/>
+								<input type="tel" id="guestPhone" name="guestPhone"
+									class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent" />
 							</div>
 
 							<!-- Dates -->
@@ -77,26 +67,16 @@
 									<label class="block text-sm font-medium mb-1">
 										Check-in Date *
 									</label>
-									<input
-										type="date"
-										id="checkInDate"
-										name="checkInDate"
-										required
-										class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent"
-									/>
+									<input type="date" id="checkInDate" name="checkInDate" required
+										class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent" />
 								</div>
 
 								<div>
 									<label class="block text-sm font-medium mb-1">
 										Check-out Date *
 									</label>
-									<input
-										type="date"
-										id="checkOutDate"
-										name="checkOutDate"
-										required
-										class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent"
-									/>
+									<input type="date" id="checkOutDate" name="checkOutDate" required
+										class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent" />
 								</div>
 							</div>
 
@@ -105,16 +85,12 @@
 								<label class="block text-sm font-medium mb-1">
 									Select Room(s) *
 								</label>
-								<select
-									id="roomSelect"
-									name="roomIds"
-									multiple
-									required
-									class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent"
-								>
-									<% room.available_rooms.forEach(r => { %>
-									<option value="<%= r.id %>">Room <%= r.number %></option>
-									<% }) %>
+								<select id="roomSelect" name="roomIds" multiple required
+									class="w-full border border-gray-300 bg-bg p-3 rounded-lg focus:ring-2 focus:ring-accent">
+									<% room.available_rooms.forEach(r=> { %>
+										<option value="<%= r.id %>">Room <%= r.number %>
+										</option>
+										<% }) %>
 								</select>
 								<p class="text-sm text-gray-500 mt-1">
 									Hold Ctrl / Cmd to select multiple rooms
@@ -135,128 +111,173 @@
 
 		<%- include('partials/footer'); %>
 
-		<script>
-			const roomPrice = Number("<%= room.price %>");
+			<script>
+				const roomPrice = Number("<%= room.price %>");
+				const categoryId = "<%= room.id %>";
 
-			const checkInInput = document.getElementById("checkInDate");
-			const checkOutInput = document.getElementById("checkOutDate");
-			const roomSelect = document.getElementById("roomSelect");
-			const totalPriceEl = document.getElementById("totalPrice");
+				const checkInInput = document.getElementById("checkInDate");
+				const checkOutInput = document.getElementById("checkOutDate");
+				const roomSelect = document.getElementById("roomSelect");
+				const totalPriceEl = document.getElementById("totalPrice");
 
-			// Default date setup (restored)
-			const today = new Date().toISOString().split("T")[0];
-			checkInInput.min = today;
-			checkInInput.value = today;
+				// Default date setup (restored)
+				const today = new Date().toISOString().split("T")[0];
+				checkInInput.min = today;
+				checkInInput.value = today;
 
-			const tomorrow = new Date(Date.now() + 86400000)
-				.toISOString()
-				.split("T")[0];
-			checkOutInput.min = tomorrow;
+				const tomorrow = new Date(Date.now() + 86400000)
+					.toISOString()
+					.split("T")[0];
+				checkOutInput.min = tomorrow;
+				checkOutInput.value = tomorrow; // Default to tomorrow
 
-			function updateCheckoutMin() {
-				const checkInDate = new Date(checkInInput.value);
-				const minCheckout = new Date(checkInDate);
-				minCheckout.setDate(checkInDate.getDate() + 1);
+				async function fetchAvailability() {
+					const checkIn = checkInInput.value;
+					const checkOut = checkOutInput.value;
 
-				checkOutInput.min = minCheckout.toISOString().split("T")[0];
-
-				if (new Date(checkOutInput.value) <= checkInDate) {
-					checkOutInput.value = "";
-				}
-
-				updateTotalPrice();
-			}
-
-			function calculateTotal() {
-				if (!checkInInput.value || !checkOutInput.value) return 0;
-
-				const checkIn = new Date(checkInInput.value);
-				const checkOut = new Date(checkOutInput.value);
-				const rooms = roomSelect.selectedOptions.length;
-
-				if (checkOut <= checkIn || rooms === 0) return 0;
-
-				const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
-
-				return nights * rooms * roomPrice;
-			}
-
-			function updateTotalPrice() {
-				const total = calculateTotal();
-				totalPriceEl.textContent =
-					total > 0 ? `Total: ₦${total.toLocaleString()}` : "Total: ₦0";
-			}
-
-			checkInInput.addEventListener("change", updateCheckoutMin);
-			checkOutInput.addEventListener("change", updateTotalPrice);
-			roomSelect.addEventListener("change", updateTotalPrice);
-
-			document
-				.getElementById("bookingForm")
-				.addEventListener("submit", async (e) => {
-					e.preventDefault();
-
-					const totalAmount = calculateTotal();
-					if (totalAmount <= 0) {
-						alert("Please select valid dates and at least one room.");
+					if (!checkIn || !checkOut || new Date(checkOut) <= new Date(checkIn)) {
 						return;
 					}
 
-					MonnifySDK.initialize({
-						amount: totalAmount,
-						currency: "NGN",
-						reference: "Rooms-" + Date.now(),
-						customerFullName: guestName.value,
-						customerEmail: guestEmail.value,
-						apiKey: "<%= monnifyApiKey %>",
-						contractCode: "<%= contractCode %>",
-						paymentDescription: "Room booking",
+					try {
+						const res = await fetch(
+							`/api/availability?checkIn=${checkIn}&checkOut=${checkOut}&categoryId=${categoryId}`
+						);
+						const data = await res.json();
 
-						metadata: {
-							platform: "SSR-EJS",
-						},
+						if (data.success) {
+							// Preserve current selection if still available
+							const selectedIds = [...roomSelect.selectedOptions].map(
+								(o) => o.value
+							);
 
-						onComplete: function (response) {
-							console.log(response);
-							const bookingData = {
+							roomSelect.innerHTML = "";
+							data.rooms.forEach((r) => {
+								const option = document.createElement("option");
+								option.value = r.id;
+								option.textContent = `Room ${r.room_number}`;
+								if (selectedIds.includes(r.id)) {
+									option.selected = true;
+								}
+								roomSelect.appendChild(option);
+							});
+
+							if (data.rooms.length === 0) {
+								const option = document.createElement("option");
+								option.disabled = true;
+								option.textContent = "No rooms available for these dates";
+								roomSelect.appendChild(option);
+							}
+						}
+					} catch (error) {
+						console.error("Error fetching availability:", error);
+					}
+					updateTotalPrice();
+				}
+
+				function updateCheckoutMin() {
+					const checkInDate = new Date(checkInInput.value);
+					const minCheckout = new Date(checkInDate);
+					minCheckout.setDate(checkInDate.getDate() + 1);
+
+					checkOutInput.min = minCheckout.toISOString().split("T")[0];
+
+					if (new Date(checkOutInput.value) <= checkInDate) {
+						checkOutInput.value = checkOutInput.min;
+					}
+
+					fetchAvailability();
+				}
+
+				function calculateTotal() {
+					if (!checkInInput.value || !checkOutInput.value) return 0;
+
+					const checkIn = new Date(checkInInput.value);
+					const checkOut = new Date(checkOutInput.value);
+					const rooms = roomSelect.selectedOptions.length;
+
+					if (checkOut <= checkIn || rooms === 0) return 0;
+
+					const nights = Math.ceil((checkOut - checkIn) / (1000 * 60 * 60 * 24));
+
+					return nights * rooms * roomPrice;
+				}
+
+				function updateTotalPrice() {
+					const total = calculateTotal();
+					totalPriceEl.textContent =
+						total > 0 ? `Total: ₦${total.toLocaleString()}` : "Total: ₦0";
+				}
+
+				// Initial call to fetch availability for default dates
+				fetchAvailability();
+
+				checkInInput.addEventListener("change", updateCheckoutMin);
+				checkOutInput.addEventListener("change", fetchAvailability);
+				roomSelect.addEventListener("change", updateTotalPrice);
+
+				document
+					.getElementById("bookingForm")
+					.addEventListener("submit", async (e) => {
+						e.preventDefault();
+						const submitBtn = e.target.querySelector('button[type="submit"]');
+
+						const totalAmount = calculateTotal();
+						if (totalAmount <= 0) {
+							showToast("Please select valid dates and at least one room.", "error");
+							return;
+						}
+
+						toggleLoading(submitBtn, true);
+
+						MonnifySDK.initialize({
+							amount: totalAmount,
+							currency: "NGN",
+							reference: "Rooms-" + Date.now(),
+							customerFullName: guestName.value,
+							customerEmail: guestEmail.value,
+							apiKey: "<%= monnifyApiKey %>",
+							contractCode: "<%= contractCode %>",
+							paymentDescription: "Room booking",
+
+							metadata: {
+								platform: "SSR-EJS",
 								guestName: guestName.value,
 								guestEmail: guestEmail.value,
 								guestPhone: guestPhone.value,
-								roomIds: [...roomSelect.selectedOptions].map((o) => o.value),
+								roomIds: [...roomSelect.selectedOptions].map((o) => o.value).join(","),
 								checkInDate: checkInInput.value,
 								checkOutDate: checkOutInput.value,
 								totalPrice: totalAmount,
-								transactionReference: response.transactionReference,
-							};
 
-							fetch("/api/bookings", {
-								method: "POST",
-								headers: {
-									"Content-Type": "application/json",
-								},
-								body: JSON.stringify(bookingData),
-							})
-								.then((res) => res.json())
-								.then((res) => {
-									const result = res;
+							},
 
-									console.log(res);
-									if (result.success) {
-										window.location.href = `/verify-payment?reference=${response.transactionReference}`;
-									} else {
-										alert("Booking failed: " + result.error);
-									}
-								})
-								.catch(() => {
-									console.error(err);
-									alert("An error occurred while confirming booking");
-								});
-						},
-						onClose: function () {
-							console.log("Payment modal closed");
-						},
+							onComplete: function (response) {
+								console.log(response);
+								const bookingData = {
+									guestName: guestName.value,
+									guestEmail: guestEmail.value,
+									guestPhone: guestPhone.value,
+									roomIds: [...roomSelect.selectedOptions].map((o) => o.value),
+									checkInDate: checkInInput.value,
+									checkOutDate: checkOutInput.value,
+									totalPrice: totalAmount,
+									transactionReference: response.transactionReference,
+								};
+								if (response.status !== "FAILED") {
+									showToast("Booking confirmed! Redirecting...");
+									window.location.href = `/verify-payment?reference=${response.transactionReference}`;
+								} else {
+									showToast("Booking failed! Please try again.", "error");
+								}
+							},
+							onClose: function () {
+								toggleLoading(submitBtn, false);
+								console.log("Payment modal closed");
+							},
+						});
 					});
-				});
-		</script>
-	</body>
+			</script>
+</body>
+
 </html>

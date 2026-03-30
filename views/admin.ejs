@@ -15,12 +15,18 @@
 			<p class="text-gray-600 mb-8">Bookings and check-in overview</p>
 
 			<!-- Stats -->
-			<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+			<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
 				<div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
 					<div class="text-2xl font-bold text-hotel">
 						<%= stats.total %>
 					</div>
 					<div class="text-gray-600">Total bookings</div>
+				</div>
+				<div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
+					<div class="text-2xl font-bold text-purple-600">
+						<%= stats.walkIns %>
+					</div>
+					<div class="text-gray-600">Walk-in guests</div>
 				</div>
 				<div class="bg-white p-6 rounded-xl shadow-md border border-gray-200">
 					<div class="text-2xl font-bold text-amber-600">
@@ -36,9 +42,11 @@
 				</div>
 			</div>
 
+
 			<!-- Actions -->
 			<div class="mb-6 flex flex-wrap gap-4 items-center">
-				<a href="/admin/check-in" class="btn">Check-in guest</a>
+				<a href="/admin/walk-in" class="btn bg-hotel hover:bg-opacity-90">Walk-in booking</a>
+				<a href="/admin/check-in" class="btn bg-gray-600 hover:bg-gray-700">Check-in guest</a>
 				<a href="/admin/categories" class="btn bg-gray-600 hover:bg-gray-700">Room categories</a>
 				<a href="/admin/rooms" class="btn bg-gray-600 hover:bg-gray-700">Rooms</a>
 				<a href="/admin/amenities" class="btn bg-gray-600 hover:bg-gray-700">Amenities</a>
@@ -47,6 +55,7 @@
 					<button type="submit" class="btn bg-gray-500 hover:bg-gray-600">Log out</button>
 				</form>
 			</div>
+
 
 
 			<!-- Bookings table -->
@@ -62,14 +71,15 @@
 								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Check-out</th>
 								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Rooms</th>
 								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Total</th>
-								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Status</th>
+								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Payment</th>
+								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Check-in</th>
 								<th class="px-6 py-3 text-sm font-semibold text-gray-700">Action</th>
 							</tr>
 						</thead>
 						<tbody class="divide-y divide-gray-200">
 							<% if (bookings.length===0) { %>
 								<tr>
-									<td colspan="8" class="px-6 py-8 text-center text-gray-500">No bookings yet.</td>
+									<td colspan="9" class="px-6 py-8 text-center text-gray-500">No bookings yet.</td>
 								</tr>
 								<% } else { %>
 									<% bookings.forEach(function(b) { %>
@@ -78,13 +88,23 @@
 												<%= b.booking_code %>
 											</td>
 											<td class="px-6 py-4">
-												<div>
-													<%= b.guest_name %>
+												<div class="flex items-center gap-2">
+													<div class="font-medium text-gray-900">
+														<%= b.guest_name %>
+													</div>
+													<% if (b.transaction_reference &&
+														b.transaction_reference.startsWith('MANUAL-')) { %>
+														<span
+															class="px-1.5 py-0.5 text-[10px] uppercase font-bold bg-purple-100 text-purple-700 rounded border border-purple-200">
+															Walk-in
+														</span>
+														<% } %>
 												</div>
 												<div class="text-sm text-gray-500">
 													<%= b.guest_email %>
 												</div>
 											</td>
+
 											<td class="px-6 py-4 text-gray-700">
 												<%= new Date(b.check_in_date).toLocaleDateString('en-US') %>
 											</td>
@@ -102,6 +122,20 @@
 													Number(b.total_price).toLocaleString() %>
 											</td>
 											<td class="px-6 py-4">
+												<% if (b.status==='confirmed' || b.status==='paid' ) { %>
+													<span
+														class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+														Paid (<%= (b.payment_method || 'Monnify'
+															).charAt(0).toUpperCase() + (b.payment_method || 'Monnify'
+															).slice(1) %>)
+													</span>
+													<% } else { %>
+														<span
+															class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-gray-100 text-gray-800">Pending</span>
+														<% } %>
+											</td>
+
+											<td class="px-6 py-4">
 												<% if (b.check_in_status==='checked_in' ) { %>
 													<span
 														class="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">Checked
@@ -112,7 +146,7 @@
 														<% } %>
 											</td>
 											<td class="px-6 py-4">
-												<a href="/check-in"
+												<a href="/admin/check-in?code=<%= b.booking_code %>"
 													class="text-hotel hover:underline font-medium">Check-in</a>
 											</td>
 										</tr>

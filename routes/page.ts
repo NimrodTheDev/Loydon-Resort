@@ -12,7 +12,12 @@ import {
 	checkInGuest,
 	getBookings,
 	getRoomDetailsByIds,
+	getCategoriesForAdmin,
+	getRoomsForAdmin,
 } from "../db/queries.js";
+
+import { verifyPayment } from "./api.js";
+import { pool } from "../db.js";
 
 const router = Router();
 
@@ -55,12 +60,13 @@ router.get("/rooms", async (req, res) => {
 
 router.get("/rooms/:category", async (req, res) => {
 	try {
+		const hotelInfo = await getHotelInfo();
 		const category = req.params.category.toLowerCase();
 		const room = await getRoomByCategory(category);
 		if (!room) {
 			return res.status(404).render("404", { page: "" });
 		}
-		res.render("roomDetails", { page: "room", room });
+		res.render("roomDetails", { page: "room", room, hotelInfo });
 	} catch (error) {
 		console.error("Error fetching room details:", error);
 		res.status(500).render("404", { page: "" });
@@ -112,7 +118,7 @@ router.get("/contact", async (req, res) => {
 				email: hotelInfo?.email || "loydon71@gmail.com",
 				hotelName: hotelInfo?.name || "Loydon Resort",
 				websiteUrl: hotelInfo?.website || "loydonresort.com",
-				nearbyLandmarks: hotelInfo?.nearbyLandmarks || [
+				nearby_landmarks: hotelInfo?.nearby_landmarks || [
 					"After Orieukwu market, umuguma",
 					"Umuguma, Police station",
 					"Before Ara Secondary School, Okuku.",
@@ -134,11 +140,7 @@ router.get("/contact", async (req, res) => {
 			email: hotelInfo.email,
 			hotelName: hotelInfo.name,
 			websiteUrl: hotelInfo.website,
-			nearbyLandmarks: [
-				"After Orieukwu market, umuguma",
-				"Umuguma, Police station",
-				"Before Ara Secondary School, Okuku.",
-			],
+			nearby_landmarks: hotelInfo.nearby_landmarks
 		});
 	} catch (error) {
 		console.error("Error fetching hotel info:", error);
@@ -174,8 +176,10 @@ router.get("/admin", async (req, res) => {
 			total: bookings.length,
 			pending: bookings.filter((b) => b.check_in_status !== "checked_in").length,
 			checkedIn: bookings.filter((b) => b.check_in_status === "checked_in").length,
+			walkIns: bookings.filter((b) => b.transaction_reference && b.transaction_reference.startsWith("MANUAL-")).length,
 		};
 		res.render("admin", { page: "admin", bookings, stats, offset: offset || 0, limit: limit || 100, pageCount: page || 1 });
+
 	} catch (error) {
 		console.error("Error loading admin:", error);
 		res.status(500).render("404", { page: "" });
@@ -199,54 +203,56 @@ router.get("/admin/settings", async (req, res) => {
 	res.render("adminSettings", { page: "admin", hotelInfo });
 });
 
+router.get("/admin/walk-in", async (req, res) => {
+	const session = req.session as { adminLoggedIn?: boolean } | undefined;
+	if (!session?.adminLoggedIn) return res.redirect("/admin/login");
+
+	const categories = await getCategoriesForAdmin();
+	res.render("adminWalkIn", { page: "admin", categories });
+});
+
 router.get("/admin/check-in", (req, res) => {
 	res.render("checkIn", { page: "admin", fromAdmin: true });
 });
 
 router.get("/verify-payment", async (req, res) => {
 	const { reference } = req.query;
+	if (!reference) return res.redirect("/");
+
 	try {
-		// Try to get payment details, but always redirect to success
-		let payment: { transactionReference: string; amountPaid: number } = { transactionReference: "", amountPaid: 0 };
+		// 1. Find booking in our DB by transaction reference
+		// This relies on the Webhook to update the status to 'confirmed'
+		const booking = await getBookingByTransactionReference(reference.toString());
 
-		if (reference) {
-			// Try to find booking by transaction reference (Monnify reference)
-			const booking = await getBookingByTransactionReference(reference.toString());
-			if (booking) {
-				payment = {
-					transactionReference: booking.transaction_reference || reference.toString(),
-					amountPaid: booking.total_price
-				};
-			} else {
-				// Fallback: use the reference as-is (might be transaction reference or booking code)
-				payment = {
-					transactionReference: reference.toString(),
-					amountPaid: 0
-				};
-			}
+		if (booking && (booking.status === "confirmed" || booking.status === "paid")) {
+			// ✅ SUCCESS CASE (Already updated by Webhook)
+			const paymentData = {
+				transactionReference: reference.toString(),
+				amountPaid: booking.total_price,
+				bookingCode: booking.booking_code || "N/A"
+			};
+			return res.render("success", { 
+				payment: paymentData, 
+				page: "success" 
+			});
+		} else {
+			// ⏳ PENDING OR FAILED CASE (Still 'pending' in our DB)
+			return res.render("payment-status", {
+				status: booking?.status.toUpperCase() || "NOT_FOUND",
+				reference: reference.toString(),
+				message: booking 
+					? "We are currently waiting for payment confirmation from Monnify. This usually takes a few moments." 
+					: "We couldn't find a booking associated with this transaction reference.",
+				page: "payment-status"
+			});
 		}
-
-
-		// Always render success page
-		const paymentData = payment || {
-			transactionReference: reference || "N/A",
-
-			amountPaid: payment || 0
-		};
-
-		return res.render("success", {
-			payment: paymentData,
-			page: "success"
-		});
 	} catch (err) {
-		console.error(err);
-		// Even on error, show success page
-		return res.render("success", {
-			payment: {
-				transactionReference: reference?.toString() || "N/A",
-				amountPaid: 0
-			},
-			page: "success"
+		console.error("❌ Verification error:", err);
+		return res.render("payment-status", {
+			status: "ERROR",
+			reference: reference.toString(),
+			message: "An error occurred while checking your payment status. Please contact support.",
+			page: "payment-status"
 		});
 	}
 });
