@@ -12,6 +12,7 @@ import {
 	checkInGuest,
 	getBookings,
 	getRoomDetailsByIds,
+	getRoomsByIds,
 	getCategoriesForAdmin,
 	getRoomsForAdmin,
 } from "../db/queries.js";
@@ -209,6 +210,24 @@ router.get("/admin/walk-in", async (req, res) => {
 
 	const categories = await getCategoriesForAdmin();
 	res.render("adminWalkIn", { page: "admin", categories });
+});
+
+router.get("/booking-success", async (req, res) => {
+	const { code } = req.query as { code: string };
+	if (!code) return res.redirect("/");
+
+	const booking = await getBookingByCode(code.toUpperCase());
+	if (!booking) return res.redirect("/");
+
+	const roomDetails = await getRoomsByIds(booking.room_ids);
+
+	res.render("booking-success", {
+		page: "booking",
+		booking: {
+			...booking,
+			room_details: roomDetails
+		}
+	});
 });
 
 router.get("/admin/check-in", (req, res) => {

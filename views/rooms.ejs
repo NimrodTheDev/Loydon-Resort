@@ -1,12 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<link rel="stylesheet" href="/css/rooms.css" />
-		<%- include('partials/head'); %>
+
+<head>
+	<link rel="stylesheet" href="/css/rooms.css" />
+	<%- include('partials/head'); %>
 		<title>Rooms</title>
-	</head>
-	<body class="bg-bg">
-		<%- include('partials/nav'); %>
+</head>
+
+<body class="bg-bg">
+	<%- include('partials/nav'); %>
 
 		<div class="max-w-6xl mx-auto px-4 mt-12 mb-20">
 			<div class="flex justify-between items-end gap-4 mb-8">
@@ -20,35 +22,37 @@
 						designed for a relaxed stay at Loydon Resort.
 					</p>
 				</div>
-				<a href="/" class="hidden md:inline-block text-sm border-b border-[#c7b8a4] pb-1"
-					>Back to home</a
-				>
+				<a href="/" class="hidden md:inline-block text-sm border-b border-[#c7b8a4] pb-1">Back to home</a>
 			</div>
 
 			<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-				<% rooms.forEach(room => { %>
-				<% const categoryImage = room.icon && !room.icon.trim().startsWith('<svg') ? room.icon : '/asset/images/elementor-placeholder-image.png'; %>
-				<div class="room-card">
-					<img src="<%= categoryImage %>" alt="<%= room.name %>" class="hero-placeholder" />
+				<% rooms.forEach(room=> { %>
+					<% const categoryImage=room.icon && !room.icon.trim().startsWith('<svg') && false ? room.icon
+						: '/asset/images/elementor-placeholder-image.png' ; %>
+						<div class="room-card">
+							<img src="<%= categoryImage %>" alt="<%= room.name %>" class="hero-placeholder" />
 
-					<div class="p-5">
-						<h3 class="text-xl font-semibold text-hotel mb-2">
-							<%= room.name %>
-						</h3>
+							<div class="p-5">
+								<h3 class="text-xl font-semibold text-hotel mb-2">
+									<%= room.name %>
+								</h3>
 
-						<p class="text-gray-600 mb-3"><%= room.short_description %></p>
+								<p class="text-gray-600 mb-3">
+									<%= room.short_description %>
+								</p>
 
-						<p class="text-lg font-semibold text-accent mb-4">
-							₦<%= room.price %> / night
-						</p>
+								<p class="text-lg font-semibold text-accent mb-4">
+									₦<%= room.price %> / night
+								</p>
 
-						<a href="/rooms/<%= room.name %>" class="btn"> View Details </a>
-					</div>
-				</div>
-				<% }) %>
+								<a href="/rooms/<%= room.name %>" class="btn"> View Details </a>
+							</div>
+						</div>
+						<% }) %>
 			</div>
 		</div>
 
 		<%- include('partials/footer'); %>
-	</body>
+</body>
+
 </html>

@@ -5,7 +5,8 @@
 	<%- include('partials/head'); %>
 		<title>Book <%= room.name %> | HotelExpress</title>
 
-		<script src="https://sdk.monnify.com/plugin/monnify.js"></script>
+	<!-- <script src="https://sdk.monnify.com/plugin/monnify.js"></script> -->
+
 </head>
 
 <body class="bg-bg">
@@ -230,6 +231,7 @@
 
 						toggleLoading(submitBtn, true);
 
+						/*
 						MonnifySDK.initialize({
 							amount: totalAmount,
 							currency: "NGN",
@@ -276,6 +278,46 @@
 								console.log("Payment modal closed");
 							},
 						});
+						*/
+
+						// --- NEW RESERVATION FLOW ---
+						try {
+							const bookingData = {
+								guestName: guestName.value,
+								guestEmail: guestEmail.value,
+								guestPhone: guestPhone.value,
+								roomIds: Array.from(roomSelect.selectedOptions).map((o) => o.value),
+								checkInDate: checkInInput.value,
+								checkOutDate: checkOutInput.value,
+								totalPrice: totalAmount,
+								transactionReference: "RES-" + Date.now(), // Reservation prefix
+							};
+
+							const response = await fetch("/api/bookings", {
+								method: "POST",
+								headers: {
+									"Content-Type": "application/json",
+								},
+								body: JSON.stringify(bookingData),
+							});
+
+							const result = await response.json();
+
+							if (result.success) {
+								showToast("Reservation received! Redirecting...");
+								setTimeout(() => {
+									window.location.href = `/booking-success?code=${result.booking.booking_code}`;
+								}, 1500);
+							} else {
+								showToast(result.error || "Reservation failed. Please try again.", "error");
+								toggleLoading(submitBtn, false);
+							}
+						} catch (error) {
+							console.error("Error creating reservation:", error);
+							showToast("An error occurred. Please try again.", "error");
+							toggleLoading(submitBtn, false);
+						}
+
 					});
 			</script>
 </body>

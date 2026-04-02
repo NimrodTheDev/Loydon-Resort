@@ -783,20 +783,20 @@ router.post("/admin/bookings", async (req, res) => {
 		);
 
 		// 3. Send confirmation email
-		try {
-			const roomDetails = await getRoomsByIds(booking.room_ids);
-			await sendBookingConfirmationEmail({
-				guestName: booking.guest_name,
-				guestEmail: booking.guest_email,
-				bookingCode: booking.booking_code,
-				checkInDate: booking.check_in_date,
-				checkOutDate: booking.check_out_date,
-				totalPrice: booking.total_price,
-				roomDetails: roomDetails
-			});
-		} catch (emailError) {
-			console.error("⏩ Walk-in: Email sending failed (non-critical):", emailError);
-		}
+		// try {
+		// 	const roomDetails = await getRoomsByIds(booking.room_ids);
+		// 	await sendBookingConfirmationEmail({
+		// 		guestName: booking.guest_name,
+		// 		guestEmail: booking.guest_email,
+		// 		bookingCode: booking.booking_code,
+		// 		checkInDate: booking.check_in_date,
+		// 		checkOutDate: booking.check_out_date,
+		// 		totalPrice: booking.total_price,
+		// 		roomDetails: roomDetails
+		// 	});
+		// } catch (emailError) {
+		// 	console.error("⏩ Walk-in: Email sending failed (non-critical):", emailError);
+		// }
 
 		res.json({ success: true, booking });
 

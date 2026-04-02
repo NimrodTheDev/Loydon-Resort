@@ -17,15 +17,13 @@
 				<div class="hero-content">
 					<p class="hero-kicker">Loydon Resort • Owerri</p>
 					<h1>
-						Luxury hotel in the<br />
-						heart of the city
+						Beauty hotel <br /> in the outskirts of Owerri west LGA - Umuguma
 					</h1>
 					<p class="hero-subtitle">
 						Loydon Resort is a modern hotel in Umuguma, Owerri, Imo State,
 						Nigeria&mdash;just after Orieukwu market and before Ara Secondary
-						School, Okuku. Enjoy quiet, air‑conditioned rooms, reliable Wi‑Fi,
-						secure parking and friendly staff a short drive from Owerri city
-						center.
+						School, Okuku. Enjoy serene environment, secure parking and friendly staff a short drive from
+						world bank last round about.
 					</p>
 				</div>
 
@@ -34,7 +32,7 @@
 						<img src="/asset/images/hero.jpg" alt="Front view of Loydon Resort" class="hero-placeholder" />
 						<div class="hero-image-overlay">
 							<p class="hero-image-title">Standard room</p>
-							<p class="hero-image-meta">Comfortable, quiet and fully air‑conditioned</p>
+							<p class="hero-image-meta">Comfortable, quiet</p>
 						</div>
 					</div>
 				</div>
@@ -107,7 +105,7 @@
 
 				<div class="rooms-grid">
 					<% rooms.forEach(room=> { %>
-						<% const categoryImage=room.icon && !room.icon.trim().startsWith('<svg') ? room.icon
+						<% const categoryImage=room.icon && !room.icon.trim().startsWith('<svg') && false ? room.icon
 							: '/asset/images/elementor-placeholder-image.png' ; %>
 							<div class="room-card">
 								<div class="room-image">
@@ -145,10 +143,6 @@
 					</div>
 				</div>
 				<div class="amenities-grid">
-					<div class="amenity-card mt-[10px]">
-						<h3>High‑speed Wi‑Fi</h3>
-						<p>Stay connected with reliable Wi‑Fi in all rooms and public areas.</p>
-					</div>
 					<div class="amenity-card mt-[40px]">
 						<h3>Restaurant &amp; bar</h3>
 						<p>Enjoy freshly prepared meals, snacks and drinks throughout the day.</p>

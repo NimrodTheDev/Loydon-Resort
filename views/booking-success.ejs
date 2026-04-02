@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<%- include('partials/head'); %>
+		<title>Reservation Confirmed | HotelExpress</title>
+</head>
+
+<body class="bg-bg">
+	<%- include('partials/nav'); %>
+
+		<div class="max-w-4xl mx-auto mt-20 px-4 mb-20">
+			<div class="bg-white p-10 rounded-2xl shadow-xl text-center">
+				<div class="mb-6 flex justify-center">
+					<div class="bg-green-100 p-4 rounded-full">
+						<svg class="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+						</svg>
+					</div>
+				</div>
+
+				<h1 class="text-4xl font-bold text-hotel mb-4">Reservation Received!</h1>
+				<p class="text-xl text-gray-600 mb-8">
+					Thank you, <%= booking.guest_name %>. Your reservation has been successfully recorded.
+				</p>
+
+				<div class="bg-gray-50 border border-gray-100 rounded-xl p-8 mb-10 max-w-md mx-auto">
+					<p class="text-sm text-gray-500 uppercase tracking-widest mb-2">Booking Code</p>
+					<div class="text-4xl font-mono font-bold text-hotel tracking-wider mb-4">
+						<%= booking.booking_code %>
+					</div>
+					<div class="text-sm text-gray-600">
+						Please present this code upon arrival for check-in and payment.
+					</div>
+				</div>
+
+				<div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-left border-t border-gray-100 pt-10">
+					<div>
+						<h3 class="text-sm font-semibold text-gray-400 uppercase mb-4">Stay Details</h3>
+						<div class="space-y-3">
+							<p><span class="text-gray-500">Check-in:</span> <span class="font-medium">
+									<%= new Date(booking.check_in_date).toLocaleDateString() %>
+								</span></p>
+							<p><span class="text-gray-500">Check-out:</span> <span class="font-medium">
+									<%= new Date(booking.check_out_date).toLocaleDateString() %>
+								</span></p>
+							<p><span class="text-gray-500">Total Price:</span> <span class="font-bold text-accent">₦<%=
+										booking.total_price.toLocaleString() %></span></p>
+						</div>
+					</div>
+					<div>
+						<h3 class="text-sm font-semibold text-gray-400 uppercase mb-4">Rooms Reserved</h3>
+						<ul class="space-y-2">
+							<% booking.room_details.forEach(room=> { %>
+								<li class="flex items-center gap-2">
+									<div class="w-2 h-2 bg-hotel rounded-full"></div>
+									<span class="font-medium">Room <%= room.roomNumber %></span>
+									<span class="text-gray-500 text-sm">(<%= room.roomCategory %>)</span>
+								</li>
+								<% }) %>
+						</ul>
+					</div>
+				</div>
+
+				<div class="mt-12 space-y-4">
+					<p class="text-gray-600">
+						A confirmation email has been sent to <span class="font-medium">
+							<%= booking.guest_email %>
+						</span>.
+					</p>
+					<div class="flex flex-col sm:flex-row gap-4 justify-center">
+						<a href="/" class="btn bg-gray-100 !text-hotel hover:bg-gray-200">Back to Home</a>
+						<a href="/rooms" class="btn">View Other Rooms</a>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<%- include('partials/footer'); %>
+</body>
+
+</html>
